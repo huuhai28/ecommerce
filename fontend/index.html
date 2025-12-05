@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Nhập (Đã Tách File JS)</title>
+    <!-- Tải Tailwind CSS cho giao diện hiện đại, tối giản -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cấu hình Font Inter và màu sắc chính -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Màu nền nhẹ nhàng */
+        }
+        .login-card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Thẻ Đăng Nhập (Login Card) -->
+    <div class="login-card w-full max-w-md bg-white p-8 md:p-10 rounded-xl">
+        <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-6">
+            Đăng Nhập
+        </h2>
+        <p class="text-center text-sm text-gray-600 mb-8">
+            Sử dụng tài khoản mẫu (Kiểm tra ở Server): <span class="font-semibold text-indigo-600">admin / 123456</span>
+        </p>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                    Tên Người Dùng
+                </label>
+                <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    required
+                    placeholder="Nhập tên người dùng..."
+                    class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                    Mật Khẩu
+                </label>
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    placeholder="Nhập mật khẩu..."
+                    class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                >
+            </div>
+
+            <!-- Khu vực hiển thị thông báo -->
+            <div id="messageBox" class="text-center p-3 rounded-lg hidden" role="alert">
+                <!-- Nội dung thông báo sẽ được thêm vào đây bằng JS -->
+            </div>
+
+            <div>
+                <button
+                    type="submit"
+                    id="loginButton"
+                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out disabled:opacity-50"
+                >
+                    Đăng Nhập
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TẢI LOGIC TỪ FILE RIÊNG - KHÔNG CÒN LỖI 404 NỮA -->
+    <script src="./login.js"></script>
+</body>
+</html>
