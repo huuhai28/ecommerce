@@ -1,0 +1,11 @@
+/* File: css/styles.css */
+
+/* Định vị cố định cho panel giỏ hàng */
+.cart-panel {
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(100%);
+    z-index: 50; /* Tailwind z-index: 50 */
+}
+.cart-panel.open {
+    transform: translateX(0);
+}

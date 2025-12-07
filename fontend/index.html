@@ -3,76 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập (Đã Tách File JS)</title>
-    <!-- Tải Tailwind CSS cho giao diện hiện đại, tối giản -->
+    <title>Trang Chủ - MyShop</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Cấu hình Font Inter và màu sắc chính -->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Màu nền nhẹ nhàng */
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 'accent': '#f97316', 'bg-light': '#f7f7f6', },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], }
+                }
+            }
         }
-        .login-card {
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 10px -5px rgba(0, 0, 0, 0.04);
-        }
-    </style>
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="bg-bg-light font-sans">
 
-    <!-- Thẻ Đăng Nhập (Login Card) -->
-    <div class="login-card w-full max-w-md bg-white p-8 md:p-10 rounded-xl">
-        <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-6">
-            Đăng Nhập
-        </h2>
-
-        <form id="loginForm" class="space-y-6">
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
-                    Tên Người Dùng
-                </label>
-                <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    required
-                    placeholder="Nhập tên người dùng..."
-                    class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
-                >
-            </div>
-
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-                    Mật Khẩu
-                </label>
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    placeholder="Nhập mật khẩu..."
-                    class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
-                >
-            </div>
-
-            <!-- Khu vực hiển thị thông báo -->
-            <div id="messageBox" class="text-center p-3 rounded-lg hidden" role="alert">
-                <!-- Nội dung thông báo sẽ được thêm vào đây bằng JS -->
-            </div>
-
-            <div>
-                <button
-                    type="submit"
-                    id="loginButton"
-                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out disabled:opacity-50"
-                >
-                    Đăng Nhập
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-accent">MyShop</a>
+            <nav class="hidden md:flex space-x-6 text-gray-600 font-medium">
+                <a href="index.html" class="hover:text-accent">Sản phẩm</a>
+                <a href="login.html" class="hover:text-accent">Đăng nhập</a>
+                <a href="admin.html" class="hover:text-accent">Admin</a>
+            </nav>
+            <div class="flex items-center space-x-4">
+                <button id="btnOpenCart" class="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4z"></path></svg>
+                    <span id="cartCount" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">0</span>
                 </button>
             </div>
-        </form>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 lg:p-8">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">Sản phẩm nổi bật</h2>
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </main>
+
+    <div id="cartPanel" class="cart-panel fixed top-0 right-0 w-full md:w-96 h-full bg-white shadow-2xl overflow-y-auto p-6">
+        <div class="flex justify-between items-center border-b pb-4 mb-4">
+            <h3 class="text-2xl font-semibold text-gray-800">Giỏ hàng</h3>
+            <button id="btnCloseCart" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div id="cartItems" class="space-y-4"></div>
+
+        <div id="cartEmptyMessage" class="text-center text-gray-500 mt-10 hidden">
+            Giỏ hàng trống.
+        </div>
+
+        <div id="cartFooter" class="mt-8 pt-4 border-t hidden">
+            <div class="flex justify-between items-center text-lg font-semibold mb-3">
+                <span>Tổng cộng:</span>
+                <span id="subtotalText" class="text-accent">0 ₫</span>
+            </div>
+            <button id="btnCheckout" class="w-full bg-accent hover:bg-orange-700 text-white font-bold py-3 rounded-lg transition duration-150 shadow-md">
+                Tiến hành Thanh toán (Giả lập)
+            </button>
+        </div>
     </div>
 
-    <!-- TẢI LOGIC TỪ FILE RIÊNG - KHÔNG CÒN LỖI 404 NỮA -->
-    <script src="./login.js"></script>
+    <script src="js/firebase-init.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
