@@ -1,27 +1,25 @@
+// frontend/js/script.js
+
 /*****************************************************************
- * Mini E-commerce frontend only (localStorage-backed)
- * Features:
- * - products stored in localStorage (sample seeded)
- * - search, category filter, sort
- * - product detail modal
- * - cart (saved to localStorage) & checkout form with fake payment
- * - simple signup/login using localStorage users (no backend)
- * - admin mode by passcode to add/edit/delete products (client-only)
- * - order history saved to localStorage per user
+ * Mini E-commerce frontend only (Đã sửa đổi để dùng JWT + API Backend)
  *****************************************************************/
 
-// ---------------- utilities ----------------
+// ---------------- utilities & API config ----------------
 const money = v => v.toLocaleString('vi-VN') + ' ₫';
 const uid = () => Math.random().toString(36).slice(2,9);
 
-// ---------------- storage keys & seed ----------------
 const LS = localStorage;
 const KEY_PRODUCTS = 'demo_products_v1';
 const KEY_CART = 'demo_cart_v1';
-const KEY_USERS = 'demo_users_v1';
+// KEY_USERS và KEY_ORDERS được giữ lại cho dữ liệu demo, nhưng Auth dùng API
+const KEY_USERS = 'demo_users_v1'; 
 const KEY_ORDERS = 'demo_orders_v1';
 
+// CẤU HÌNH API BACKEND
+const API_BASE_URL = 'http://localhost:3001/api'; 
+
 const SAMPLE = [
+  // ... dữ liệu sản phẩm mẫu (giữ nguyên)
   {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun co dãn, thoáng mát.',img:'https://picsum.photos/seed/t1/800/600'},
   {id:'p2',title:'Quần jean',price:499000,category:'Quần',desc:'Quần jean nam form ôm.',img:'https://picsum.photos/seed/t2/800/600'},
   {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang.',img:'https://picsum.photos/seed/t3/800/600'},
@@ -53,6 +51,33 @@ const cartItemsWrap = document.getElementById('cartItems');
 const subtotalText = document.getElementById('subtotalText');
 const userArea = document.getElementById('userArea');
 const modals = document.getElementById('modals');
+
+// ---------------- JWT/Auth helpers ----------------
+function getToken() {
+    return LS.getItem('userToken');
+}
+
+function checkTokenAndInitUser() {
+    const token = getToken();
+    if (token) {
+        // TẠM THỜI cho Lab: Đọc thông tin User từ localStorage
+        const storedUser = LS.getItem('storedUser');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                currentUser = {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    is_admin: user.is_admin || false 
+                };
+            } catch (e) {
+                LS.removeItem('storedUser');
+                LS.removeItem('userToken');
+            }
+        }
+    }
+}
 
 // ---------------- render helpers ----------------
 function saveProducts(){ LS.setItem(KEY_PRODUCTS, JSON.stringify(products)); }
@@ -151,12 +176,18 @@ function openProductModal(p){
   wrap.querySelector('#closeModal').onclick = ()=>wrap.remove();
 }
 
-// ---------------- auth (local only) ----------------
+// ---------------- Auth (API Backend) ----------------
 function renderUserArea(){
   userArea.innerHTML='';
-  if(currentUser){
+  if(currentUser && getToken()){ // Cập nhật để kiểm tra token
     userArea.innerHTML = `<div class='muted'>Xin chào ${currentUser.name || currentUser.email}</div><button id='btnLogout'>Đăng xuất</button>`;
-    document.getElementById('btnLogout').onclick = ()=>{ currentUser=null; renderUserArea(); showFlash('Đã đăng xuất'); };
+    document.getElementById('btnLogout').onclick = ()=>{ 
+        currentUser=null; 
+        LS.removeItem('userToken'); // Xóa Token
+        LS.removeItem('storedUser'); // Xóa thông tin User
+        renderUserArea(); 
+        showFlash('Đã đăng xuất'); 
+    };
   } else {
     userArea.innerHTML = `<button id='btnLoginModal'>Đăng nhập</button>`;
     document.getElementById('btnLoginModal').onclick = openLoginModal;
@@ -165,7 +196,7 @@ function renderUserArea(){
 
 function openLoginModal(){
   const html = `
-    <h3>Đăng nhập / Đăng ký</h3>
+    <h3>Đăng nhập / Đăng ký (API)</h3>
     <div style='display:flex;gap:8px;margin-top:10px'>
       <input id='inEmail' placeholder='Email' style='flex:1'>
       <input id='inName' placeholder='Tên (chỉ khi đăng ký)' style='flex:1'>
@@ -181,28 +212,87 @@ function openLoginModal(){
   `;
   const wrap = openModal(html);
   wrap.querySelector('#btnClose').onclick = ()=>wrap.remove();
-  wrap.querySelector('#btnSignUp').onclick = ()=>{
+
+  // === ĐĂNG KÝ (Sử dụng API) ===
+  wrap.querySelector('#btnSignUp').onclick = async () => { 
     const email = wrap.querySelector('#inEmail').value.trim();
-    const name = wrap.querySelector('#inName').value.trim() || email.split('@')[0];
+    const name = wrap.querySelector('#inName').value.trim();
     const pass = wrap.querySelector('#inPass').value;
-    if(!email || !pass){ alert('Nhập email & mật khẩu'); return; }
-    if(users.find(u=>u.email===email)){ alert('Email đã tồn tại'); return; }
-    const newu = {id: uid(),email,name,password:pass,is_admin:false}; users.push(newu); saveUsers(); currentUser = {...newu}; wrap.remove(); renderUserArea(); showFlash('Đăng ký thành công');
+
+    if (!email || !pass){ alert('Nhập email & mật khẩu'); return; }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, name: name || email.split('@')[0], password: pass })
+        });
+        
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert('Đăng ký thất bại: ' + (data.message || 'Lỗi không xác định'));
+            return;
+        }
+
+        alert('Đăng ký thành công. Vui lòng đăng nhập.');
+        wrap.remove();
+
+    } catch (error) {
+        console.error('Lỗi kết nối API đăng ký:', error);
+        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3001)');
+    }
   };
-  wrap.querySelector('#btnLogin').onclick = ()=>{
+
+  // === ĐĂNG NHẬP (Sử dụng API và JWT) ===
+  wrap.querySelector('#btnLogin').onclick = async () => {
     const email = wrap.querySelector('#inEmail').value.trim();
     const pass = wrap.querySelector('#inPass').value;
-    const u = users.find(x=>x.email===email && x.password===pass);
-    if(!u){ alert('Sai email hoặc mật khẩu'); return; }
-    currentUser = {...u}; wrap.remove(); renderUserArea(); showFlash('Đăng nhập thành công');
+    
+    if (!email || !pass){ alert('Nhập email & mật khẩu'); return; }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.token) {
+            alert('Đăng nhập thất bại: ' + (data.message || 'Sai email hoặc mật khẩu.'));
+            return;
+        }
+
+        // LƯU TOKEN và USER CỤC BỘ (QUAN TRỌNG)
+        const { token, user } = data; 
+        LS.setItem('userToken', token);
+        LS.setItem('storedUser', JSON.stringify(user));
+        
+        currentUser = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            is_admin: false 
+        };
+        
+        wrap.remove();
+        renderUserArea();
+        showFlash('Đăng nhập thành công');
+
+    } catch (error) {
+        console.error('Lỗi kết nối API đăng nhập:', error);
+        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3000)');
+    }
   };
 }
 
 // ---------------- admin (client-only by passcode) ----------------
 document.getElementById('btnAdmin').onclick = ()=>{
+  // ... Logic Admin (giữ nguyên, chỉ hoạt động trên dữ liệu localStorage)
   const pass = prompt('Nhập mã admin (demo):');
   if(pass === 'admin123'){
-    // grant admin to current user OR create temporary admin
     if(!currentUser){ currentUser = {id:'admin-temp',email:'admin@demo',name:'Admin',is_admin:true}; }
     currentUser.is_admin = true;
     showAdminPanel();
@@ -210,6 +300,7 @@ document.getElementById('btnAdmin').onclick = ()=>{
 };
 
 function showAdminPanel(){
+  // ... Logic Admin (giữ nguyên)
   const html = `
     <h3>Admin - Quản lý sản phẩm</h3>
     <div style='display:flex;gap:8px;margin-top:8px'>
@@ -258,12 +349,14 @@ function showAdminPanel(){
 
 // ---------------- checkout & orders (local) ----------------
 document.getElementById('btnCheckout').onclick = ()=>{
+  // ... Logic Checkout (giữ nguyên, cần được cập nhật để gọi API trong môi trường thực)
   if(Object.keys(cart).length===0){ alert('Giỏ trống'); return; }
   if(!currentUser){ if(!confirm('Bạn chưa đăng nhập. Tiếp tục với tư cách khách?')) return; }
   openCheckoutModal();
 };
 
 function openCheckoutModal(){
+  // ... Logic Checkout (giữ nguyên)
   const html = `
     <h3>Thanh toán</h3>
     <div style='display:flex;gap:8px;margin-top:8px'><input id='ch_name' placeholder='Họ & tên' style='flex:1'></div>
@@ -301,6 +394,7 @@ function showOrderSuccess(order){
 
 // ---------------- orders list ----------------
 document.getElementById('btnOrders').onclick = ()=>{
+  // ... Logic Orders (giữ nguyên)
   const html = `<h3>Đơn hàng của bạn</h3><div id='ordList'></div><div style='margin-top:12px'><button id='ordClose'>Đóng</button></div>`;
   const wrap = openModal(html);
   const list = wrap.querySelector('#ordList'); list.innerHTML='';
@@ -315,6 +409,7 @@ document.getElementById('btnOrders').onclick = ()=>{
 
 // ---------------- init ----------------
 function init(){
+  checkTokenAndInitUser(); // <-- Bắt đầu bằng việc kiểm tra JWT
   renderCategories(); renderProducts(); renderCart(); renderUserArea();
   qInput.oninput = renderProducts; catSelect.onchange = renderProducts;
   document.getElementById('btnOpenCart').onclick = ()=>{ cartPanel.style.display = cartPanel.style.display==='none'?'block':'none'; };

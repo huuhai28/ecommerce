@@ -1,65 +1,112 @@
-// 1. Cài đặt các modules cần thiết (Node.js/Express.js)
-// Bạn cần chạy lệnh: npm init -y && npm install express
+// backend/server.js
+require('dotenv').config();
 const express = require('express');
-const path = require('path');
-const app = express();
-const PORT = 3000;
+const { Pool } = require('pg');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const cors = require('cors'); // Để cho phép frontend truy cập
 
-// --- THÊM MIDDLEWARE ĐỂ XỬ LÝ JSON TỪ REQUEST BODY ---
-// Điều này rất quan trọng để server có thể đọc được dữ liệu username/password gửi từ frontend
+const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// 1. Cấu hình CORS: Cho phép Frontend (chạy trên cổng khác) truy cập
+// TRONG MÔI TRƯỜNG LAB, chúng ta cho phép tất cả (*)
+app.use(cors());
+
+// Middleware để đọc JSON
 app.use(express.json());
 
-// 2. Định nghĩa thư mục chứa các file tĩnh (HTML, CSS, JS frontend)
-// Phục vụ file index.html khi truy cập vào đường dẫn gốc (/)
-app.get('/', (req, res) => {
-    // Sử dụng path.join để đảm bảo đường dẫn hoạt động trên mọi hệ điều hành
-    // __dirname là thư mục hiện tại chứa file server.js
-    res.sendFile(path.join(__dirname, 'index.html'));
+// 2. Kết nối PostgreSQL
+const pool = new Pool({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_DATABASE,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
 });
 
-// 3. --- ENDPOINT /LOGIN ĐỂ XỬ LÝ XÁC THỰC (BACKEND LOGIC) ---
-// Đây chính là "microservice" đơn giản của bạn
-app.post('/login', (req, res) => {
-    // Lấy dữ liệu từ body của yêu cầu POST
-    const { username, password } = req.body;
+// Chức năng: Middleware bảo vệ API bằng JWT
+function protect(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    // Format: Bearer <token>
+    const token = authHeader && authHeader.split(' ')[1]; 
+    
+    if (token == null) return res.status(401).json({ message: 'Không có token, truy cập bị từ chối' });
 
-    // Định nghĩa tài khoản mẫu (Đây là nơi sau này bạn kết nối với Database/Service khác)
-    const VALID_USERNAME = 'admin';
-    const VALID_PASSWORD = '123456';
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: 'Token không hợp lệ hoặc hết hạn' });
+        req.userId = user.userId; // Trích xuất userId từ token
+        next();
+    });
+}
 
-    console.log(`Đã nhận yêu cầu đăng nhập: ${username}`);
+// ------------------- ENDPOINTS -------------------
 
-    // Thực hiện kiểm tra xác thực
-    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-        // Trả về JSON cho biết đăng nhập thành công
-        // Trong ứng dụng thực tế, bạn sẽ trả về một JWT (Token) ở đây.
-        return res.status(200).json({ 
-            success: true, 
-            message: 'Đăng nhập thành công' 
-        });
-    } else {
-        // Trả về JSON cho biết đăng nhập thất bại
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Tên người dùng hoặc mật khẩu không đúng.' 
-        });
+// POST /api/register
+app.post('/api/register', async (req, res) => {
+    const { email, name, password } = req.body;
+    try {
+        if (!password) {
+            return res.status(400).json({ message: 'Mật khẩu là bắt buộc' });
+        }
+        // Băm mật khẩu (Hash password)
+        const password_hash = await bcrypt.hash(password, 10);
+        
+        // Chèn người dùng mới
+        const result = await pool.query(
+            'INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) RETURNING id',
+            [email, name, password_hash]
+        );
+        res.status(201).json({ message: 'Đăng ký thành công', userId: result.rows[0].id });
+
+    } catch (err) {
+        if (err.code === '23505') { // Lỗi unique (ví dụ: email đã tồn tại)
+            return res.status(409).json({ message: 'Email đã tồn tại' });
+        }
+        console.error('Lỗi đăng ký:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi đăng ký' });
     }
 });
 
+// POST /api/login
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        // 1. Tìm người dùng
+        const result = await pool.query('SELECT id, password_hash, name FROM users WHERE email = $1', [email]);
+        const user = result.rows[0];
 
-// 4. Khởi động Server
-app.listen(PORT, () => {
-    console.log(`Server đang chạy tại http://localhost:${PORT}`);
-    console.log('Sử dụng Ctrl + C để dừng server.');
+        if (!user) {
+            return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
+        }
+
+        // 2. So sánh mật khẩu
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
+        }
+        
+        // 3. Tạo JWT
+        const token = jwt.sign({ userId: user.id, email: email }, JWT_SECRET, { expiresIn: '1d' });
+        
+        // Trả về Token và thông tin cơ bản
+        res.json({ token, user: { id: user.id, name: user.name, email: email } });
+
+    } catch (err) {
+        console.error('Lỗi đăng nhập:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
+    }
 });
 
-/*
-Hướng dẫn chạy:
-1. Đảm bảo bạn có Node.js cài đặt.
-2. Tạo file server.js và đặt file index.html (trang đăng nhập) cùng thư mục.
-3. Mở terminal, chạy các lệnh sau:
-   - npm init -y
-   - npm install express
-   - node server.js
-4. Mở trình duyệt và truy cập: http://localhost:3000
-*/
+// GET /api/cart (Ví dụ về Endpoint được bảo vệ)
+app.get('/api/cart', protect, (req, res) => {
+    // Trong môi trường lab, chỉ trả về một thông báo đơn giản
+    res.json({ message: `Dữ liệu giỏ hàng của User ID: ${req.userId} (Được xác thực qua JWT)` });
+});
+
+
+// Khởi động server
+app.listen(PORT, () => {
+    console.log(`Server Backend chạy trên http://localhost:${PORT}`);
+});
