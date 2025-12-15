@@ -71,12 +71,56 @@ services:
       DB_PASSWORD: 123456
       DB_DATABASE: ${DB_DATABASE}
       JWT_SECRET: ${JWT_SECRET}
+      PAYMENT_URL: http://payment_service:3005/api
     ports:
       - "3003:3003"
     depends_on:
       postgres_db:
         condition: service_healthy
-    
+
+  payment_service:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+    container_name: ecommerce_payment
+    restart: always
+    environment:
+      PORT: 3005
+      DB_HOST: postgres_db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: 123456
+      DB_DATABASE: ${DB_DATABASE}
+      DB_PORT: ${DB_PORT}
+      ORDER_URL: http://order_service:3003
+    ports:
+      - "3005:3005"
+
+  cart_service:
+    build:
+      context: ./services/cart
+      dockerfile: Dockerfile
+    container_name: ecommerce_cart
+    restart: always
+    environment:
+      PORT: 3006
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "3006:3006"
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
   frontend:
     build:
       context: ./fontend
@@ -91,4 +135,5 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 

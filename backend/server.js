@@ -137,7 +137,8 @@ app.post("/api/login", async (req, res) => {
 app.get("/api/products", async (req, res) => {
     try {
         // Giả định bảng products có các cột: id, title, price, category, desc, img
-        const result = await pool.query("SELECT id, title, price, category, desc, img FROM products ORDER BY id DESC");
+        // NOTE: "desc" là từ khóa SQL nên cần được đặt trong dấu ngoặc kép
+        const result = await pool.query('SELECT id, title, price, category, "desc" as desc, img FROM products ORDER BY id DESC');
         res.json(result.rows);
     } catch (err) {
         console.error("Lỗi lấy sản phẩm:", err.message);
@@ -155,7 +156,7 @@ app.post("/api/products", protect, async (req, res) => {
         }
 
         const result = await pool.query(
-            "INSERT INTO products (title, price, category, img, desc) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+            'INSERT INTO products (title, price, category, img, "desc") VALUES ($1,$2,$3,$4,$5) RETURNING *',
             [title, price, category, img, desc]
         );
 
@@ -168,7 +169,6 @@ app.post("/api/products", protect, async (req, res) => {
 });
 
 /* ===================== ORDERS ===================== */
-
 // POST /api/orders (Tạo đơn hàng)
 app.post("/api/orders", protect, async (req, res) => {
     const { items, total } = req.body; 

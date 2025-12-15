@@ -17,9 +17,10 @@ const KEY_ORDERS = 'demo_orders_v1';
 
 // CẤU HÌNH API BACKEND MICROSERVICES
 // Tùy chỉnh base URL cho từng Service
-const USER_API_URL = 'http://localhost:3001/api'; // User Service (Cổng 3001)
+const USER_API_URL = 'http://localhost:3004/api'; // User Service (Cổng 3004)
 const CATALOGUE_API_URL = 'http://localhost:3002/api'; // Catalogue Service (Cổng 3002)
 const ORDER_API_URL = 'http://localhost:3003/api'; // Order Service (Cổng 3003)
+const PAYMENT_API_URL = 'http://localhost:3005/api'; // Payment Service (mock) (Cổng 3005)
 
 const SAMPLE = [
   // ... dữ liệu sản phẩm mẫu (giữ nguyên)
@@ -243,7 +244,7 @@ function openLoginModal(){
 
     } catch (error) {
         console.error('Lỗi kết nối API đăng ký:', error);
-        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3001)');
+        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3004)');
     }
   };
 
@@ -286,7 +287,7 @@ function openLoginModal(){
 
     } catch (error) {
         console.error('Lỗi kết nối API đăng nhập:', error);
-        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3000)');
+        alert('Lỗi: Không thể kết nối đến máy chủ Backend. (Kiểm tra Server chạy trên cổng 3004)');
     }
   };
 }
@@ -452,17 +453,19 @@ function openCheckoutModal(){
 
             // 3. Xử lý phản hồi từ Backend
             if (response.ok) {
-                // Đặt hàng thành công
-                const orderId = data.orderId || data.id; // Backend trả về orderId
-                
-                // Cập nhật trạng thái cục bộ
-                cart = {}; 
-                saveCart(); 
-                renderCart();
-                
-                wrap.remove();
-                showOrderSuccess({ id: orderId, total: total }); // Hiển thị thông báo thành công
-                
+              // Đặt hàng thành công
+              const orderId = data.orderId || data.id; // Backend trả về orderId
+              const payment = data.payment || null;
+
+              // Cập nhật trạng thái cục bộ
+              cart = {}; 
+              saveCart(); 
+              renderCart();
+
+              wrap.remove();
+              // Hiển thị thông báo thành công và thông tin thanh toán nếu có
+              showOrderSuccess({ id: orderId, total: total, payment });
+
             } else {
                 // Đặt hàng thất bại
                 alert('Đặt hàng thất bại: ' + (data.message || 'Lỗi không xác định.'));
@@ -479,9 +482,32 @@ function openCheckoutModal(){
 // KẾT THÚC SỬA HÀM openCheckoutModal
 
 function showOrderSuccess(order){
-  const html = `<h3>Đặt hàng thành công</h3><div>Mã đơn: <strong>${order.id}</strong></div><div>Tổng: <strong>${money(order.total)}</strong></div><div style='margin-top:12px'><button id='ok' style='padding:8px;border-radius:8px'>OK</button></div>`;
+  let paymentHtml = '';
+  if (order.payment) {
+    const p = order.payment;
+    paymentHtml = `<div style='margin-top:8px'>Thanh toán: <strong>${p.status}</strong> (Provider: ${p.provider})</div><div style='margin-top:6px'><button id='btnViewPayment' style='padding:6px;border-radius:6px'>Xem chi tiết thanh toán</button></div>`;
+  }
+
+  const html = `<h3>Đặt hàng thành công</h3><div>Mã đơn: <strong>${order.id}</strong></div><div>Tổng: <strong>${money(order.total)}</strong></div>${paymentHtml}<div style='margin-top:12px'><button id='ok' style='padding:8px;border-radius:8px'>OK</button></div>`;
   const wrap = openModal(html);
   wrap.querySelector('#ok').onclick = ()=>wrap.remove();
+  if (order.payment) { wrap.querySelector('#btnViewPayment').onclick = ()=> showPaymentDetail(order.payment.id); }
+}
+
+async function showPaymentDetail(paymentId){
+  try {
+    const resp = await fetch(`${PAYMENT_API_URL}/payments/${paymentId}`);
+    if (!resp.ok) { alert('Không tìm thấy thông tin thanh toán'); return; }
+    const p = await resp.json();
+    const html = `<h3>Chi tiết thanh toán</h3>
+      <div>ID: <strong>${p.id}</strong></div>
+      <div>Order ID: ${p.orderId}</div>
+      <div>Số tiền: ${money(p.amount)}</div>
+      <div>Trạng thái: <strong>${p.status}</strong></div>
+      <div>Provider: ${p.provider}</div>
+      <div style='margin-top:12px'><button id='ok2' style='padding:8px;border-radius:8px'>Đóng</button></div>`;
+    const wrap = openModal(html); wrap.querySelector('#ok2').onclick = ()=>wrap.remove();
+  } catch (err) { console.error('Lỗi khi tải payment detail:', err); alert('Không thể tải thông tin thanh toán'); }
 }
 // ---------------- orders list ----------------
 document.getElementById('btnOrders').onclick = async () => {
@@ -529,15 +555,18 @@ document.getElementById('btnOrders').onclick = async () => {
                 
                 // Lưu ý: Các trường phải khớp với những gì API /api/orders/me trả về 
                 // (id, total, status, created_at, items)
+                const payment = (o.payments && o.payments.length>0) ? o.payments[0] : null;
                 d.innerHTML = `
-                    <div>
-                        <strong>Mã Đơn: ${o.id}</strong> - ${new Date(o.created_at).toLocaleString()}
-                    </div>
-                    <div class=muted>
-                        Tổng: ${money(o.total)} • Trạng thái: <strong>${o.status}</strong>
-                    </div>
+                  <div>
+                    <strong>Mã Đơn: ${o.id}</strong> - ${new Date(o.created_at).toLocaleString()}
+                  </div>
+                  <div class=muted>
+                    Tổng: ${money(o.total)} • Trạng thái: <strong>${o.status}</strong>
+                    ${ payment ? ` • Thanh toán: <strong>${payment.status}</strong> ( ${payment.provider} ) <button data-pid='${payment.payment_id}' class='btnViewPay' style='margin-left:8px'>Xem thanh toán</button>` : '' }
+                  </div>
                 `;
                 list.appendChild(d);
+                if(payment){ d.querySelector('.btnViewPay').onclick = ()=> showPaymentDetail(payment.payment_id); }
             });
         }
         

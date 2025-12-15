@@ -84,7 +84,28 @@ app.post("/api/orders", protect, async (req, res) => {
 
         await client.query('COMMIT'); // Commit giao dịch
 
-        res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId });
+        // Sau khi lưu đơn, gọi Payment Service để xử lý thanh toán (mock hoặc thực tế)
+        try {
+            const paymentUrlBase = process.env.PAYMENT_URL || 'http://localhost:3005/api';
+            const resp = await fetch(`${paymentUrlBase}/payments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: orderId, amount: total, method: 'mock' })
+            });
+
+            const payData = await resp.json().catch(() => ({}));
+            if (resp.ok) {
+                // Cập nhật trạng thái đơn là Paid nếu thanh toán thành công
+                await client.query('UPDATE orders SET status=$1 WHERE id=$2', ['Paid', orderId]);
+                return res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId, payment: payData.payment || payData });
+            } else {
+                // Nếu thanh toán thất bại, trả về thông tin lỗi nhưng giữ đơn ở trạng thái Pending
+                return res.status(502).json({ message: 'Order created but payment failed', paymentError: payData.message || payData });
+            }
+        } catch (err) {
+            console.error('Lỗi khi gọi Payment Service:', err);
+            return res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId, warn: 'Không thể kết nối Payment Service' });
+        }
 
     } catch (err) {
         await client.query('ROLLBACK'); // Rollback nếu có lỗi
@@ -126,17 +147,52 @@ app.get("/api/orders/me", protect, async (req, res) => {
             return acc;
         }, {});
 
-        // Kết hợp items vào mỗi order
-        const ordersWithItems = orders.map(order => ({
-            ...order,
-            items: itemsMap[order.id] || []
-        }));
+            // Lấy payments tương ứng với các order
+            const paymentsResult = await pool.query(
+                `SELECT payment_id, order_id, amount, status, provider, created_at
+                 FROM payments
+                 WHERE order_id = ANY($1::int[])`,
+                [orderIds]
+            );
+
+            const paymentsMap = paymentsResult.rows.reduce((acc, p) => {
+                acc[p.order_id] = acc[p.order_id] || [];
+                acc[p.order_id].push(p);
+                return acc;
+            }, {});
+
+            // Kết hợp items và payments vào mỗi order
+            const ordersWithItems = orders.map(order => ({
+                ...order,
+                items: itemsMap[order.id] || [],
+                payments: paymentsMap[order.id] || []
+            }));
 
         res.json(ordersWithItems);
 
     } catch (err) {
         console.error("Lỗi lấy đơn hàng:", err.message);
         res.status(500).json({ message: "Lỗi server khi lấy đơn hàng." });
+    }
+});
+
+// POST /api/orders/:id/payment-callback (called by Payment Service)
+app.post('/api/orders/:id/payment-callback', async (req, res) => {
+    const orderId = parseInt(req.params.id, 10);
+    const { paymentId, status } = req.body;
+    if (!orderId || !paymentId) return res.status(400).json({ message: 'orderId & paymentId required' });
+
+    try {
+        if (status === 'success') {
+            await pool.query('UPDATE orders SET status=$1 WHERE id=$2', ['Paid', orderId]);
+            return res.json({ message: 'Order updated to Paid' });
+        } else {
+            await pool.query('UPDATE orders SET status=$1 WHERE id=$2', ['Payment Failed', orderId]);
+            return res.json({ message: 'Order updated to Payment Failed' });
+        }
+    } catch (err) {
+        console.error('Payment callback error:', err.message);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

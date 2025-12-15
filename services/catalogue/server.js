@@ -27,7 +27,8 @@ const pool = new Pool({
 app.get("/api/products", async (req, res) => {
     try {
         // Giả định bảng products có các cột: id, title, price, category, desc, img
-        const result = await pool.query("SELECT id, title, price, category, desc, img FROM products ORDER BY id DESC");
+        // NOTE: "desc" là từ khóa SQL nên cần được đặt trong dấu ngoặc kép
+        const result = await pool.query('SELECT id, title, price, category, "desc" as desc, img FROM products ORDER BY id DESC');
         res.json(result.rows);
     } catch (err) {
         console.error("Lỗi lấy sản phẩm:", err.message);
