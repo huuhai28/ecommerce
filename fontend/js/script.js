@@ -21,6 +21,7 @@ const USER_API_URL = 'http://localhost:3004/api'; // User Service (Cổng 3004)
 const CATALOGUE_API_URL = 'http://localhost:3002/api'; // Catalogue Service (Cổng 3002)
 const ORDER_API_URL = 'http://localhost:3003/api'; // Order Service (Cổng 3003)
 const PAYMENT_API_URL = 'http://localhost:3005/api'; // Payment Service (mock) (Cổng 3005)
+const SHIP_API_URL = 'http://localhost:3007/api'; // Shipping Service (Cổng 3007)
 
 const SAMPLE = [
   // ... dữ liệu sản phẩm mẫu (giữ nguyên)
@@ -509,6 +510,24 @@ async function showPaymentDetail(paymentId){
     const wrap = openModal(html); wrap.querySelector('#ok2').onclick = ()=>wrap.remove();
   } catch (err) { console.error('Lỗi khi tải payment detail:', err); alert('Không thể tải thông tin thanh toán'); }
 }
+
+async function showShippingDetail(orderId){
+  try {
+    const resp = await fetch(`${SHIP_API_URL}/shippings/${orderId}`);
+    if (!resp.ok) { alert('Không tìm thấy thông tin vận chuyển'); return; }
+    const data = await resp.json();
+    if (!Array.isArray(data) || data.length === 0) { alert('Không có bản ghi vận chuyển'); return; }
+    const latest = data[0];
+    const html = `<h3>Chi tiết vận chuyển</h3>
+      <div>Shipping ID: <strong>${latest.shipping_id}</strong></div>
+      <div>Order ID: ${latest.order_id}</div>
+      <div>Trạng thái: <strong>${latest.status}</strong></div>
+      <div>Số tracking: ${latest.tracking_number || '—'}</div>
+      <div>Payload: <pre style='white-space:pre-wrap'>${JSON.stringify(latest.payload,null,2)}</pre></div>
+      <div style='margin-top:12px'><button id='okship' style='padding:8px;border-radius:8px'>Đóng</button></div>`;
+    const wrap = openModal(html); wrap.querySelector('#okship').onclick = ()=>wrap.remove();
+  } catch (err) { console.error('Lỗi khi tải shipping detail:', err); alert('Không thể tải thông tin vận chuyển'); }
+}
 // ---------------- orders list ----------------
 document.getElementById('btnOrders').onclick = async () => {
     // 1. Kiểm tra đăng nhập và Token
@@ -556,6 +575,7 @@ document.getElementById('btnOrders').onclick = async () => {
                 // Lưu ý: Các trường phải khớp với những gì API /api/orders/me trả về 
                 // (id, total, status, created_at, items)
                 const payment = (o.payments && o.payments.length>0) ? o.payments[0] : null;
+                const shipping = (o.shipments && o.shipments.length>0) ? o.shipments[0] : null;
                 d.innerHTML = `
                   <div>
                     <strong>Mã Đơn: ${o.id}</strong> - ${new Date(o.created_at).toLocaleString()}
@@ -563,10 +583,12 @@ document.getElementById('btnOrders').onclick = async () => {
                   <div class=muted>
                     Tổng: ${money(o.total)} • Trạng thái: <strong>${o.status}</strong>
                     ${ payment ? ` • Thanh toán: <strong>${payment.status}</strong> ( ${payment.provider} ) <button data-pid='${payment.payment_id}' class='btnViewPay' style='margin-left:8px'>Xem thanh toán</button>` : '' }
+                    ${ shipping ? ` • Vận chuyển: <strong>${shipping.status}</strong> <button data-oid='${o.id}' class='btnViewShip' style='margin-left:8px'>Xem vận chuyển</button>` : '' }
                   </div>
                 `;
                 list.appendChild(d);
                 if(payment){ d.querySelector('.btnViewPay').onclick = ()=> showPaymentDetail(payment.payment_id); }
+                if(shipping){ d.querySelector('.btnViewShip').onclick = ()=> showShippingDetail(o.id); }
             });
         }
         
