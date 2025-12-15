@@ -47,6 +47,19 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Shipping records
+CREATE TABLE IF NOT EXISTS shippings (
+  id SERIAL PRIMARY KEY,
+  shipping_id TEXT UNIQUE NOT NULL,
+  order_id INT,
+  user_id INT,
+  status TEXT,
+  provider TEXT,
+  tracking_number TEXT,
+  payload JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Ensure FK and index exist (idempotent)
 DO $$
 BEGIN
@@ -61,6 +74,18 @@ BEGIN
     SELECT 1 FROM pg_indexes WHERE indexname = 'payments_order_id_idx'
   ) THEN
     CREATE INDEX payments_order_id_idx ON payments(order_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'shippings_order_id_fkey'
+  ) THEN
+    UPDATE shippings SET order_id = NULL WHERE order_id IS NOT NULL AND order_id NOT IN (SELECT id FROM orders);
+    ALTER TABLE shippings ADD CONSTRAINT shippings_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE indexname = 'shippings_order_id_idx'
+  ) THEN
+    CREATE INDEX shippings_order_id_idx ON shippings(order_id);
   END IF;
 END$$;
 

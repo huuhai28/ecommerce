@@ -29,6 +29,8 @@ docker exec postgres_db_main psql -U postgres -d ecommerce_db -f /tmp/init.sql
   - Catalogue service: 3002 (host 3002)
   - Order service: 3003 (host 3003)
   - Payment service: 3005 (host 3005)
+  - RabbitMQ management UI: 15672 (guest/guest)
+  - Shipping service: 3007 (host 3007)
   - Cart service: 3006 (host 3006) — Redis-backed cart service
   - Redis: 6379 (host 6379)
 
