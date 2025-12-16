@@ -1,16 +1,14 @@
 {
-  "name": "cart_service",
+  "name": "cart-service",
   "version": "1.0.0",
+  "description": "Simple key-value cart service",
   "main": "server.js",
-  "license": "MIT",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "redis": "^4.7.1",
-    "uuid": "^9.0.0"
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
   }
 }

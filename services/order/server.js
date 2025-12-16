@@ -5,11 +5,33 @@ const express = require('express');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken'); // Cần JWT để xác thực token
 const cors = require('cors');
+const amqp = require('amqplib');
 
 const app = express();
 // Lấy cổng từ biến môi trường (Docker Compose sẽ truyền vào 3003)
 const PORT = process.env.PORT || 3003; 
 const JWT_SECRET = process.env.JWT_SECRET; 
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672/';
+const SHIPPING_QUEUE = process.env.RABBITMQ_QUEUE || 'shipping.requests';
+
+let amqpChannel = null;
+async function initRabbit() {
+    // try to connect in a loop until RabbitMQ becomes available
+    while (!amqpChannel) {
+        try {
+            const conn = await amqp.connect(RABBITMQ_URL);
+            const ch = await conn.createChannel();
+            await ch.assertQueue(SHIPPING_QUEUE, { durable: true });
+            amqpChannel = ch;
+            console.log('✅ Order Service connected to RabbitMQ');
+            break;
+        } catch (err) {
+            console.warn('⚠️ Could not connect to RabbitMQ, retrying in 3s:', err.message);
+            amqpChannel = null;
+            await new Promise(r => setTimeout(r, 3000));
+        }
+    }
+}
 
 // ---------------- Middleware ----------------
 app.use(cors());
@@ -23,24 +45,6 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
 });
-
-// RabbitMQ publisher setup (optional)
-const amqp = require('amqplib');
-let amqpChannel = null;
-async function initAmqp() {
-    try {
-        const rabbitUrl = process.env.RABBITMQ_URL || `amqp://${process.env.RABBITMQ_HOST || 'localhost'}:${process.env.RABBITMQ_PORT || 5672}`;
-        console.log('Attempting RabbitMQ connection to', rabbitUrl);
-        const conn = await amqp.connect(rabbitUrl);
-        const ch = await conn.createChannel();
-        await ch.assertQueue('shipping.queue', { durable: true });
-        amqpChannel = ch;
-        console.log('✅ Connected to RabbitMQ');
-    } catch (err) {
-        console.warn('⚠️ RabbitMQ not available, will retry in 5s:', err.message);
-        setTimeout(initAmqp, 5000);
-    }
-}
 
 // ---------------- Middleware Bảo vệ (JWT) ----------------
 function protect(req, res, next) {
@@ -102,6 +106,9 @@ app.post("/api/orders", protect, async (req, res) => {
 
         await client.query('COMMIT'); // Commit giao dịch
 
+        // Best-effort: publish order created event for shipping
+        try { await publishOrderCreated(orderId, userId, items, total, 'Pending'); } catch (e) { /* ignore */ }
+
         // Sau khi lưu đơn, gọi Payment Service để xử lý thanh toán (mock hoặc thực tế)
         try {
             const paymentUrlBase = process.env.PAYMENT_URL || 'http://localhost:3005/api';
@@ -115,16 +122,8 @@ app.post("/api/orders", protect, async (req, res) => {
             if (resp.ok) {
                 // Cập nhật trạng thái đơn là Paid nếu thanh toán thành công
                 await client.query('UPDATE orders SET status=$1 WHERE id=$2', ['Paid', orderId]);
-                // publish to shipping queue
-                try {
-                    if (amqpChannel) {
-                        const payload = { orderId, userId, items, total, createdAt: new Date() };
-                        amqpChannel.sendToQueue('shipping.queue', Buffer.from(JSON.stringify(payload)), { persistent: true });
-                        console.log('Published shipping message for order', orderId);
-                    }
-                } catch (err) {
-                    console.error('Failed to publish shipping message', err.message);
-                }
+                // Publish paid event so shipping can proceed if it requires paid orders
+                try { await publishOrderCreated(orderId, userId, items, total, 'Paid'); } catch (e) { /* ignore */ }
                 return res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId, payment: payData.payment || payData });
             } else {
                 // Nếu thanh toán thất bại, trả về thông tin lỗi nhưng giữ đơn ở trạng thái Pending
@@ -143,6 +142,17 @@ app.post("/api/orders", protect, async (req, res) => {
         client.release(); // Giải phóng client
     }
 });
+
+async function publishOrderCreated(orderId, userId, items, total, status) {
+    if (!amqpChannel) return;
+    const payload = { orderId, userId, items, total, status };
+    try {
+        amqpChannel.sendToQueue(SHIPPING_QUEUE, Buffer.from(JSON.stringify(payload)), { persistent: true });
+        console.log('Published order event to RabbitMQ', payload.orderId, payload.status);
+    } catch (err) {
+        console.error('Failed to publish to RabbitMQ', err.message);
+    }
+}
 
 // GET /api/orders/me (Lấy đơn hàng của user đang đăng nhập)
 app.get("/api/orders/me", protect, async (req, res) => {
@@ -175,40 +185,11 @@ app.get("/api/orders/me", protect, async (req, res) => {
             return acc;
         }, {});
 
-            // Lấy payments tương ứng với các order
-            const paymentsResult = await pool.query(
-                `SELECT payment_id, order_id, amount, status, provider, created_at
-                 FROM payments
-                 WHERE order_id = ANY($1::int[])`,
-                [orderIds]
-            );
-
-            const shippingsResult = await pool.query(
-                `SELECT shipping_id, order_id, status, payload, created_at
-                 FROM shippings
-                 WHERE order_id = ANY($1::int[])`,
-                [orderIds]
-            );
-
-            const shippingsMap = shippingsResult.rows.reduce((acc, s) => {
-                acc[s.order_id] = acc[s.order_id] || [];
-                acc[s.order_id].push(s);
-                return acc;
-            }, {});
-
-            const paymentsMap = paymentsResult.rows.reduce((acc, p) => {
-                acc[p.order_id] = acc[p.order_id] || [];
-                acc[p.order_id].push(p);
-                return acc;
-            }, {});
-
-            // Kết hợp items và payments vào mỗi order
-            const ordersWithItems = orders.map(order => ({
-                ...order,
-                items: itemsMap[order.id] || [],
-                payments: paymentsMap[order.id] || []
-                ,shipments: shippingsMap[order.id] || []
-            }));
+        // Kết hợp items vào mỗi order
+        const ordersWithItems = orders.map(order => ({
+            ...order,
+            items: itemsMap[order.id] || []
+        }));
 
         res.json(ordersWithItems);
 
@@ -218,58 +199,18 @@ app.get("/api/orders/me", protect, async (req, res) => {
     }
 });
 
-// POST /api/orders/:id/payment-callback (called by Payment Service)
-app.post('/api/orders/:id/payment-callback', async (req, res) => {
-    const orderId = parseInt(req.params.id, 10);
-    const { paymentId, status } = req.body;
-    if (!orderId || !paymentId) return res.status(400).json({ message: 'orderId & paymentId required' });
-
-    try {
-        if (status === 'success') {
-            await pool.query('UPDATE orders SET status=$1 WHERE id=$2', ['Paid', orderId]);
-            return res.json({ message: 'Order updated to Paid' });
-        } else {
-            await pool.query('UPDATE orders SET status=$1 WHERE id=$2', ['Payment Failed', orderId]);
-            return res.json({ message: 'Order updated to Payment Failed' });
-        }
-    } catch (err) {
-        console.error('Payment callback error:', err.message);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// POST /api/orders/:id/shipping-callback (called by Shipping Service)
-app.post('/api/orders/:id/shipping-callback', async (req, res) => {
-    const orderId = parseInt(req.params.id, 10);
-    const { shippingId, status } = req.body;
-    if (!orderId || !shippingId) return res.status(400).json({ message: 'orderId & shippingId required' });
-
-    try {
-        // Optionally update order status to 'Shipped' when shipping is queued or completed
-        if (status === 'queued') {
-            await pool.query('UPDATE orders SET status=$1 WHERE id=$2', ['Shipped', orderId]);
-            return res.json({ message: 'Order updated to Shipped' });
-        }
-        return res.json({ message: 'Shipping callback acknowledged' });
-    } catch (err) {
-        console.error('Shipping callback error:', err.message);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
 
 /* ===================== RUN SERVER ===================== */
 
 pool.connect()
-    .then(() => {
-        console.log(`✅ Order Service connected to DB`);
-        // Start RabbitMQ connect attempts
-        initAmqp().catch(() => {});
-    })
+    .then(() => console.log(`✅ Order Service connected to DB`))
     .catch(err => {
         console.error("❌ Order Service DB ERROR:", err.message);
         process.exit(1); 
     });
+
+// Initialize RabbitMQ connection (best-effort)
+initRabbit().catch(() => {});
 
 app.listen(PORT, () =>
     console.log(`🚀 Order Service running at http://localhost:${PORT}`)

@@ -1,0 +1,66 @@
+# Template for a service deployment and service
+# Replace <name> and <image> before applying, or use Helm/templating
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: <name>
+  namespace: ecommerce
+  labels:
+    app: <name>
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: <name>
+  template:
+    metadata:
+      labels:
+        app: <name>
+    spec:
+      containers:
+      - name: <name>
+        image: <image>
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DB_HOST
+          value: postgres
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        - name: DB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_DATABASE
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: JWT_SECRET
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: RABBITMQ_URL
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: <name>
+  namespace: ecommerce
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: <name>
+  type: ClusterIP

@@ -71,14 +71,46 @@ services:
       DB_PASSWORD: 123456
       DB_DATABASE: ${DB_DATABASE}
       JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       PAYMENT_URL: http://payment_service:3005/api
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
     ports:
       - "3003:3003"
     depends_on:
       postgres_db:
         condition: service_healthy
+      payment_service:
+        condition: service_started
+    # Publish order-created events to RabbitMQ; shipping service consumes them
+    
+  frontend:
+    build:
+      context: ./fontend
+      dockerfile: Dockerfile
+    container_name: ecommerce_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - user_service
+      - catalogue_service
+      - order_service
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecommerce_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   payment_service:
     build:
@@ -92,12 +124,10 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: 123456
       DB_DATABASE: ${DB_DATABASE}
-      DB_PORT: ${DB_PORT}
-      ORDER_URL: http://order_service:3003
     ports:
       - "3005:3005"
     depends_on:
-      - rabbitmq
+      - postgres_db
 
   cart_service:
     build:
@@ -107,36 +137,8 @@ services:
     restart: always
     environment:
       PORT: 3006
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3006:3006"
-    depends_on:
-      - redis
-      - rabbitmq
-
-  redis:
-    image: redis:7-alpine
-    container_name: ecommerce_redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: ecommerce_rabbitmq
-    restart: always
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
 
   shipping_service:
     build:
@@ -146,34 +148,17 @@ services:
     restart: always
     environment:
       PORT: 3007
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DB_HOST: postgres_db
       DB_USER: ${DB_USER}
       DB_PASSWORD: 123456
       DB_DATABASE: ${DB_DATABASE}
-      DB_PORT: ${DB_PORT}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      ORDER_URL: http://order_service:3003
     ports:
       - "3007:3007"
     depends_on:
-      - postgres_db
       - rabbitmq
-
-  frontend:
-    build:
-      context: ./fontend
-      dockerfile: Dockerfile
-    container_name: ecommerce_frontend
-    restart: always
-    ports:
-      - "8080:80"
-    depends_on:
-      - user_service
-      - catalogue_service
+      - postgres_db
 
 volumes:
   postgres_data:
-  redis_data:
-  rabbitmq_data:
 

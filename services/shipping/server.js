@@ -1,11 +1,9 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
 const amqp = require('amqplib');
 const { Pool } = require('pg');
 
-const PORT = process.env.PORT || 3007;
-const RABBIT_URL = process.env.RABBITMQ_URL || `amqp://${process.env.RABBITMQ_HOST || 'localhost'}:${process.env.RABBITMQ_PORT || 5672}`;
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672/';
+const QUEUE = process.env.RABBITMQ_QUEUE || 'shipping.requests';
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -15,72 +13,47 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-async function start() {
-  await pool.connect();
-  const conn = await amqp.connect(RABBIT_URL);
-  const ch = await conn.createChannel();
-  const queue = process.env.SHIP_QUEUE || 'shipping.queue';
-  await ch.assertQueue(queue, { durable: true });
-
-  ch.consume(queue, async (msg) => {
-    if (!msg) return;
-    try {
-      const content = JSON.parse(msg.content.toString());
-      console.log('Received shipping message', content);
-
-      // Persist shipping record
-      const shippingId = require('uuid').v4();
-      const { orderId, userId, items, total, createdAt } = content;
-      await pool.query(
-        `INSERT INTO shippings(shipping_id, order_id, user_id, status, payload, created_at)
-         VALUES($1,$2,$3,$4,$5,$6)`,
-        [shippingId, orderId || null, userId || null, 'queued', content, createdAt || new Date()]
-      );
-
-      // Ack message
-      ch.ack(msg);
-      console.log('Shipping record persisted', shippingId);
-
-      // Optionally callback Order service to notify shipping created
-      try {
-        const ORDER_URL = process.env.ORDER_URL;
-        if (ORDER_URL && orderId) {
-          await fetch(`${ORDER_URL}/api/orders/${orderId}/shipping-callback`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ shippingId, status: 'queued' })
-          }).catch(() => {});
-        }
-      } catch (err) {
-        // ignore callback errors
-      }
-
-    } catch (err) {
-      console.error('Failed processing shipping message', err);
-      // Don't ack so it can be retried
-    }
-  }, { noAck: false });
-
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
-
-  app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-  app.get('/api/shippings/:orderId', async (req, res) => {
-    const { orderId } = req.params;
-    try {
-      const result = await pool.query(`SELECT shipping_id, order_id, user_id, status, payload, created_at FROM shippings WHERE order_id=$1 ORDER BY created_at DESC`, [orderId]);
-      res.json(result.rows);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'failed to get shippings' });
-    }
-  });
-
-  app.listen(PORT, () => console.log(`🚀 Shipping service running at http://localhost:${PORT}`));
+async function ensureTable(){
+  await pool.query(`CREATE TABLE IF NOT EXISTS shipping (
+    id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(id),
+    user_id INT,
+    address JSONB,
+    items JSONB,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW(),
+    processed_at TIMESTAMP
+  )`);
 }
 
-start().catch(err => {
-  console.error('Failed to start shipping service', err);
-  process.exit(1);
-});
+async function start(){
+  await ensureTable();
+  const conn = await amqp.connect(RABBITMQ_URL);
+  const ch = await conn.createChannel();
+  await ch.assertQueue(QUEUE, { durable: true });
+  console.log('Listening for shipping requests on', QUEUE);
+
+  ch.consume(QUEUE, async (msg) => {
+    if (!msg) return;
+    try {
+      const payload = JSON.parse(msg.content.toString());
+      // Normalize items: sometimes items may be serialized as a JSON string
+      let items = payload.items;
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (e) { items = [{ raw: items }]; }
+      }
+      if (Array.isArray(items) && items.length && typeof items[0] === 'string') {
+        items = items.map(it => { try { return JSON.parse(it); } catch (e) { return { raw: it }; } });
+      }
+      console.log('Received shipping request', payload.orderId || payload.orderId);
+      await pool.query('INSERT INTO shipping(order_id, user_id, address, items, status) VALUES($1,$2,$3,$4,$5)',
+        [payload.orderId, payload.userId || null, payload.address || null, JSON.stringify(items) || null, payload.status || 'pending']);
+      ch.ack(msg);
+    } catch (err) {
+      console.error('Error processing shipping message', err);
+      // don't ack so it can be retried or moved to DLQ by RabbitMQ policies
+    }
+  }, { noAck: false });
+}
+
+start().catch(err => { console.error('Shipping service error', err); process.exit(1); });

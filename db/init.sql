@@ -37,57 +37,23 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE TABLE IF NOT EXISTS payments (
   id SERIAL PRIMARY KEY,
-  payment_id TEXT UNIQUE NOT NULL,
-  order_id INT,
-  amount INT NOT NULL,
-  method TEXT,
-  status TEXT,
+  order_id INT REFERENCES orders(id),
   provider TEXT,
-  metadata JSONB,
+  amount INT,
+  status TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Shipping records
-CREATE TABLE IF NOT EXISTS shippings (
+CREATE TABLE IF NOT EXISTS shipping (
   id SERIAL PRIMARY KEY,
-  shipping_id TEXT UNIQUE NOT NULL,
-  order_id INT,
+  order_id INT REFERENCES orders(id),
   user_id INT,
-  status TEXT,
-  provider TEXT,
-  tracking_number TEXT,
-  payload JSONB,
-  created_at TIMESTAMP DEFAULT NOW()
+  address JSONB,
+  items JSONB,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW(),
+  processed_at TIMESTAMP
 );
-
--- Ensure FK and index exist (idempotent)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'payments_order_id_fkey'
-  ) THEN
-    -- Clean orphaned payments (set to NULL) before adding FK
-    UPDATE payments SET order_id = NULL WHERE order_id IS NOT NULL AND order_id NOT IN (SELECT id FROM orders);
-    ALTER TABLE payments ADD CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE indexname = 'payments_order_id_idx'
-  ) THEN
-    CREATE INDEX payments_order_id_idx ON payments(order_id);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'shippings_order_id_fkey'
-  ) THEN
-    UPDATE shippings SET order_id = NULL WHERE order_id IS NOT NULL AND order_id NOT IN (SELECT id FROM orders);
-    ALTER TABLE shippings ADD CONSTRAINT shippings_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE indexname = 'shippings_order_id_idx'
-  ) THEN
-    CREATE INDEX shippings_order_id_idx ON shippings(order_id);
-  END IF;
-END$$;
 
 -- Seed sample products used by frontend (ids match SAMPLE in frontend)
 INSERT INTO products(id, title, price, category, img, "desc") VALUES
