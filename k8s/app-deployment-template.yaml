@@ -24,7 +24,7 @@ spec:
             memory: "256Mi"
             cpu: "200m"
         ports:
-        - containerPort: 3000 # Cổng code frontend đang chạy
+        - containerPort: 80 # Cổng code frontend đang chạy
 ---
 apiVersion: v1
 kind: Service
@@ -35,7 +35,7 @@ spec:
   type: NodePort # Đổi thành NodePort để truy cập từ ngoài
   ports:
   - port: 80
-    targetPort: 3000
+    targetPort: 80
     nodePort: 30001 # Bạn có thể truy cập qua IP_Worker:30001
   selector:
     app: frontend
