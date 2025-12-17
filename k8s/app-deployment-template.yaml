@@ -1,26 +1,21 @@
-# Template for a service deployment and service
-# Replace <name> and <image> before applying, or use Helm/templating
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: <name>
+  name: frontend-service
   namespace: ecommerce
-  labels:
-    app: <name>
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: <name>
+      app: frontend
   template:
     metadata:
       labels:
-        app: <name>
+        app: frontend
     spec:
       containers:
-      - name: <name>
-        image: <image>
-        imagePullPolicy: IfNotPresent
+      - name: frontend
+        image: huuhai123/frontend-service:latest # Thay bằng image bạn đã push
         resources:
           requests:
             memory: "128Mi"
@@ -28,46 +23,19 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
-        env:
-        - name: DB_HOST
-          value: postgres
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
-        - name: DB_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_DATABASE
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: JWT_SECRET
-        - name: RABBITMQ_URL
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: RABBITMQ_URL
         ports:
-        - containerPort: 3000
+        - containerPort: 3000 # Cổng code frontend đang chạy
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: <name>
+  name: frontend-service
   namespace: ecommerce
 spec:
+  type: NodePort # Đổi thành NodePort để truy cập từ ngoài
   ports:
-  - port: 3000
+  - port: 80
     targetPort: 3000
+    nodePort: 30001 # Bạn có thể truy cập qua IP_Worker:30001
   selector:
-    app: <name>
-  type: ClusterIP
+    app: frontend
