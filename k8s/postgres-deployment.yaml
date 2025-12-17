@@ -18,6 +18,14 @@ spec:
       containers:
       - name: postgres
         image: postgres:14-alpine
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         env:
         - name: POSTGRES_USER
           valueFrom:

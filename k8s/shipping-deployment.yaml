@@ -17,8 +17,15 @@ spec:
     spec:
       containers:
       - name: shipping-service
-        image: doan-shipping_service:latest
+        image: huuhai123/shipping-service:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         env:
         - name: RABBITMQ_URL
           valueFrom:

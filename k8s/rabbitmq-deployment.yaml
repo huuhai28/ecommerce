@@ -18,6 +18,14 @@ spec:
       containers:
       - name: rabbitmq
         image: rabbitmq:3-management
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         ports:
         - name: amqp
           containerPort: 5672

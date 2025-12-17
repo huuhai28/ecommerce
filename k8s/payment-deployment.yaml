@@ -17,8 +17,15 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: doan-payment_service:latest
+        image: huuhai123/payment-service:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         env:
         - name: PORT
           value: "3005"

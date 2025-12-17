@@ -17,8 +17,15 @@ spec:
     spec:
       containers:
       - name: order-service
-        image: doan-order_service:latest
+        image: huuhai123/order-service:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         env:
         - name: PORT
           value: "3003"

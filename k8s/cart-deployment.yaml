@@ -17,8 +17,15 @@ spec:
     spec:
       containers:
       - name: cart-service
-        image: doan-cart_service:latest
+        image: huuhai123/cart-service:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         env:
         - name: PORT
           value: "3006"
