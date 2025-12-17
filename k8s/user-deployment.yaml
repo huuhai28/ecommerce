@@ -60,9 +60,10 @@ metadata:
   name: user-service
   namespace: ecommerce
 spec:
+  type: NodePort
   ports:
   - port: 3004
     targetPort: 3004
+    nodePort: 30004
   selector:
     app: user-service
-  type: ClusterIP
