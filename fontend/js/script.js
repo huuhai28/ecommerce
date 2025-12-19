@@ -225,7 +225,7 @@ function openLoginModal(){
 }
 
 // ---------------- Checkout ----------------
-document.getElementById('btnCheckout').onclick = () => {
+document.getElementById('btnCheckout')?.onclick = () => {
     if (!getToken()) { alert("Vui lòng đăng nhập"); openLoginModal(); return; }
     if (Object.keys(cart).length === 0) { alert("Giỏ hàng trống"); return; }
     openCheckoutModal();
