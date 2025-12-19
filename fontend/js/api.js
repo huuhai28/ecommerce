@@ -4,7 +4,7 @@
  * CẤU HÌNH ĐỊA CHỈ IP CỦA MÁY CHỦ MASTER
  * Thay đổi IP này nếu bạn sang mạng khác hoặc IP máy ảo thay đổi.
  */
-const MASTER_IP = "192.168.1.111"; 
+const MASTER_IP = "192.168.1.112"; 
 
 // Gateway chạy trên NodePort 30004 mà bạn đã cấu hình trong K8s
 const BASE_URL = `http://${MASTER_IP}:30004/api`;

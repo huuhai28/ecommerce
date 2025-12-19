@@ -14,7 +14,7 @@ spec:
         app: frontend
     spec:
       nodeSelector:
-        kubernetes.io/hostname: master-node # Đảm bảo Master Node của bạn có label này
+        kubernetes.io/hostname: master-node
       containers:
       - name: frontend
         image: huuhai123/frontend-service:latest # Thay bằng image bạn đã push
