@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: ecommerce
+  labels:
+    app: backend-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+      - name: backend-api
+        image: huuhai123/backend-service:latest # Thay bằng tên image bạn đã push
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3004
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-api
+  namespace: ecommerce
+spec:
+  type: NodePort
+  ports:
+  - port: 3004
+    targetPort: 3004
+    nodePort: 30004 # Đây là cổng quan trọng để Frontend gọi vào IP 192.168.1.112:30004
+  selector:
+    app: backend-api

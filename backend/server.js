@@ -1,25 +1,42 @@
+// backend/server.js
 const express = require('express');
+const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+
 const app = express();
+const PORT = process.env.PORT || 3004;
 
-// Điều hướng sang User Service
-app.use('/api/users', createProxyMiddleware({ 
-    target: 'http://user-service:3004', 
-    changeOrigin: true 
+// 1. Cho phép Frontend truy cập (CORS)
+app.use(cors());
+
+/**
+ * 2. ĐIỀU HƯỚNG PROXY (SERVICE DISCOVERY)
+ * Trong K8s, ta gọi các service bằng tên Service Name thay vì IP.
+ */
+
+// Điều hướng Login/Register sang User Service (Cổng 3004)
+app.use('/api/users', createProxyMiddleware({
+    target: 'http://user-service:3004',
+    changeOrigin: true,
+    pathRewrite: { '^/api/users': '/api' } // Chuyển /api/users/login thành /api/login khi gửi tới user-service
 }));
 
-// Điều hướng sang Catalogue Service
-app.use('/api/products', createProxyMiddleware({ 
-    target: 'http://catalogue-service:3002', 
-    changeOrigin: true 
+// Điều hướng Sản phẩm sang Catalogue Service (Cổng 3002)
+app.use('/api/products', createProxyMiddleware({
+    target: 'http://catalogue-service:3002',
+    changeOrigin: true,
+    pathRewrite: { '^/api/products': '/api/products' }
 }));
 
-// Điều hướng sang Order Service
-app.use('/api/orders', createProxyMiddleware({ 
-    target: 'http://order-service:3003', 
-    changeOrigin: true 
+// Điều hướng Đơn hàng sang Order Service (Cổng 3003)
+app.use('/api/orders', createProxyMiddleware({
+    target: 'http://order-service:3003',
+    changeOrigin: true,
+    pathRewrite: { '^/api/orders': '/api/orders' }
 }));
 
-app.listen(3004, '0.0.0.0', () => {
-    console.log('API Gateway is running on port 3004');
+// 3. Khởi chạy Gateway
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 API Gateway is running on port ${PORT}`);
+    console.log(`🔗 Proxying /api/users to http://user-service:3004`);
 });
