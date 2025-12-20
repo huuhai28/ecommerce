@@ -4,10 +4,9 @@
  * CẤU HÌNH ĐỊA CHỈ IP CỦA MÁY CHỦ MASTER
  * Thay đổi IP này nếu bạn sang mạng khác hoặc IP máy ảo thay đổi.
  */
-const MASTER_IP = "192.168.1.111"; 
-
+const BACKEND_API_GATEWAY_IP = window.BACKEND_API_GATEWAY_IP || "192.168.1.112"; // Fallback nếu biến môi trường không có
 // Gateway chạy trên NodePort 30004 mà bạn đã cấu hình trong K8s
-const BASE_URL = `http://${MASTER_IP}:30004/api`;
+const BASE_URL = `http://${BACKEND_API_GATEWAY_IP}:30004/api`;
 
 /**
  * QUẢN LÝ CÁC ĐƯỜNG DẪN API (ENDPOINTS)
