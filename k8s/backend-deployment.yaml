@@ -19,10 +19,10 @@ spec:
         kubernetes.io/hostname: worker-node
       containers:
       - name: backend-api
-        image: huuhai123/backend-service:latest # Thay bằng tên image bạn đã push
+        image: huuhai123/backend-service:v9 # Thay bằng tên image bạn đã push
         imagePullPolicy: Always
         ports:
-        - containerPort: 3004
+        - containerPort: 3010
         resources:
           requests:
             memory: "64Mi"
@@ -39,8 +39,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 3004
-    targetPort: 3004
+  - port: 3010
+    targetPort: 3010
     nodePort: 30004 # Đây là cổng quan trọng để Frontend gọi vào IP 192.168.1.112:30004
   selector:
     app: backend-api

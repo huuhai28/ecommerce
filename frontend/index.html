@@ -1,7 +1,5 @@
 <!doctype html>
 <html lang="vi">
-  <script src="js/api.js"></script>
-<script src="js/script.js"></script>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -50,6 +48,13 @@
 
   <div id="modals"></div>
 
+  <script>
+    // Enable gateway mode BEFORE loading api.js
+    window.BACKEND_API_GATEWAY_IP = window.location.hostname;
+    window.BACKEND_API_GATEWAY_PORT = 30004;
+  </script>
+  <script src="js/api.js" defer></script>
   <script type="module" src="js/script.js"></script>
 
 </body>
+</html>

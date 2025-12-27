@@ -4,7 +4,6 @@ require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken'); // Cần JWT để xác thực token
-const cors = require('cors');
 const amqp = require('amqplib');
 
 const app = express();
@@ -34,7 +33,7 @@ async function initRabbit() {
 }
 
 // ---------------- Middleware ----------------
-app.use(cors());
+// CORS handled by API Gateway
 app.use(express.json());
 
 // ---------------- Kết nối PostgreSQL ----------------
@@ -57,110 +56,181 @@ function protect(req, res, next) {
     
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            // LƯU Ý: Nếu User Service đã tách, bạn có thể cân nhắc 
-            // dùng Public Key để xác thực token mà không cần JWT_SECRET.
             return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" }); 
         }
-        req.userId = decoded.userId;
+        req.customerId = decoded.customerId;
         next();
     });
+}
+
+// Helper function: Tạo tracking number
+function generateTrackingNumber() {
+    return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
 /* ===================== ORDERS ROUTES ===================== */
 
 // POST /api/orders (Tạo đơn hàng mới)
 app.post("/api/orders", protect, async (req, res) => {
-    const { items, total } = req.body; 
-    const userId = req.userId;
+    const { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
+    const customerId = req.customerId;
 
-    if (!items || !total || items.length === 0) {
+    if (!items || !totalPrice || items.length === 0) {
         return res.status(400).json({ message: "Thiếu thông tin giỏ hàng hoặc tổng tiền." });
     }
     
-    // Bắt đầu transaction (Giao dịch)
     const client = await pool.connect();
     
     try {
         await client.query('BEGIN'); 
 
-        // 1. Lưu Order chính
+        // 1. Tạo address nếu cần
+        let billingAddressId = null;
+        let shippingAddressId = null;
+
+        if (billingAddress) {
+            const addrResult = await client.query(
+                `INSERT INTO address(street, city, state, country, zip_code) 
+                 VALUES($1, $2, $3, $4, $5) RETURNING id`,
+                [billingAddress.street, billingAddress.city, billingAddress.state, 
+                 billingAddress.country, billingAddress.zipCode]
+            );
+            billingAddressId = addrResult.rows[0].id;
+        }
+
+        if (shippingAddress) {
+            const addrResult = await client.query(
+                `INSERT INTO address(street, city, state, country, zip_code) 
+                 VALUES($1, $2, $3, $4, $5) RETURNING id`,
+                [shippingAddress.street, shippingAddress.city, shippingAddress.state, 
+                 shippingAddress.country, shippingAddress.zipCode]
+            );
+            shippingAddressId = addrResult.rows[0].id;
+        }
+
+        // 2. Tạo Order chính
+        const trackingNumber = generateTrackingNumber();
         const orderResult = await client.query(
-            "INSERT INTO orders(user_id, total, status, created_at) VALUES($1, $2, 'Pending', NOW()) RETURNING id",
-            [userId, total]
+            `INSERT INTO orders(order_tracking_number, total_price, total_quantity, 
+                                customer_id, billing_address_id, shipping_address_id, 
+                                status, date_created) 
+             VALUES($1, $2, $3, $4, $5, $6, 'PENDING', NOW()) RETURNING id`,
+            [trackingNumber, totalPrice, totalQuantity, customerId, 
+             billingAddressId, shippingAddressId]
         );
 
         const orderId = orderResult.rows[0].id;
 
-        // 2. Lưu từng Order Item
+        // 3. Lưu Order Items
         for (const item of items) {
-            if (!item.id || !item.quantity || !item.price) {
+            if (!item.productId || !item.quantity || !item.unitPrice) {
                 throw new Error("Dữ liệu item trong giỏ hàng không hợp lệ.");
             }
             
             await client.query(
-                `INSERT INTO order_items(order_id, product_id, quantity, price)
-                 VALUES($1, $2, $3, $4)`,
-                [orderId, item.id, item.quantity, item.price]
+                `INSERT INTO order_item(order_id, product_id, quantity, unit_price, image_url)
+                 VALUES($1, $2, $3, $4, $5)`,
+                [orderId, item.productId, item.quantity, item.unitPrice, item.imageUrl]
             );
         }
 
-        await client.query('COMMIT'); // Commit giao dịch
+        await client.query('COMMIT');
 
         // Best-effort: publish order created event for shipping
-        try { await publishOrderCreated(orderId, userId, items, total, 'Pending'); } catch (e) { /* ignore */ }
-
-        // Sau khi lưu đơn, gọi Payment Service để xử lý thanh toán (mock hoặc thực tế)
-        try {
-            const paymentUrlBase = process.env.PAYMENT_URL || 'http://localhost:3005/api';
-            const resp = await fetch(`${paymentUrlBase}/payments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId: orderId, amount: total, method: 'mock' })
-            });
-
-            const payData = await resp.json().catch(() => ({}));
-            if (resp.ok) {
-                // Cập nhật trạng thái đơn là Paid nếu thanh toán thành công
-                await client.query('UPDATE orders SET status=$1 WHERE id=$2', ['Paid', orderId]);
-                // Publish paid event so shipping can proceed if it requires paid orders
-                try { await publishOrderCreated(orderId, userId, items, total, 'Paid'); } catch (e) { /* ignore */ }
-                return res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId, payment: payData.payment || payData });
-            } else {
-                // Nếu thanh toán thất bại, trả về thông tin lỗi nhưng giữ đơn ở trạng thái Pending
-                return res.status(502).json({ message: 'Order created but payment failed', paymentError: payData.message || payData });
-            }
-        } catch (err) {
-            console.error('Lỗi khi gọi Payment Service:', err);
-            return res.status(201).json({ message: "Tạo đơn hàng thành công", orderId: orderId, warn: 'Không thể kết nối Payment Service' });
+        try { 
+            await publishOrderCreated(orderId, customerId, items, totalPrice, 'PENDING'); 
+        } catch (e) { 
+            console.error('Warning: Could not publish to RabbitMQ:', e.message);
         }
 
+        res.status(201).json({ 
+            message: "Tạo đơn hàng thành công",
+            orderId: orderId,
+            trackingNumber: trackingNumber,
+            status: 'PENDING'
+        });
+
     } catch (err) {
-        await client.query('ROLLBACK'); // Rollback nếu có lỗi
+        await client.query('ROLLBACK');
         console.error("Lỗi tạo đơn hàng:", err);
         res.status(500).json({ message: "Lỗi server trong quá trình xử lý đơn hàng." });
     } finally {
-        client.release(); // Giải phóng client
+        client.release();
     }
 });
 
-async function publishOrderCreated(orderId, userId, items, total, status) {
+async function publishOrderCreated(orderId, customerId, items, totalPrice, status) {
     if (!amqpChannel) return;
-    const payload = { orderId, userId, items, total, status };
+    const payload = { orderId, customerId, items, totalPrice, status };
     try {
         amqpChannel.sendToQueue(SHIPPING_QUEUE, Buffer.from(JSON.stringify(payload)), { persistent: true });
-        console.log('Published order event to RabbitMQ', payload.orderId, payload.status);
+        console.log('✅ Published order event to RabbitMQ:', orderId);
     } catch (err) {
-        console.error('Failed to publish to RabbitMQ', err.message);
+        console.error('❌ Failed to publish to RabbitMQ:', err.message);
+        throw err;
     }
 }
 
-// GET /api/orders/me (Lấy đơn hàng của user đang đăng nhập)
+// GET /api/orders/:id (Lấy chi tiết đơn hàng)
+app.get("/api/orders/:id", protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const orderResult = await pool.query(
+            `SELECT id, order_tracking_number, total_price, total_quantity, 
+                    customer_id, billing_address_id, shipping_address_id, 
+                    status, date_created, last_updated
+             FROM orders WHERE id=$1`,
+            [id]
+        );
+
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
+        }
+
+        const order = orderResult.rows[0];
+
+        // Lấy order items
+        const itemsResult = await pool.query(
+            `SELECT id, product_id, quantity, unit_price, image_url 
+             FROM order_item WHERE order_id=$1`,
+            [id]
+        );
+
+        res.json({
+            id: order.id,
+            trackingNumber: order.order_tracking_number,
+            totalPrice: parseFloat(order.total_price),
+            totalQuantity: order.total_quantity,
+            customerId: order.customer_id,
+            billingAddressId: order.billing_address_id,
+            shippingAddressId: order.shipping_address_id,
+            status: order.status,
+            dateCreated: order.date_created,
+            lastUpdated: order.last_updated,
+            items: itemsResult.rows.map(item => ({
+                id: item.id,
+                productId: item.product_id,
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unit_price),
+                imageUrl: item.image_url
+            }))
+        });
+
+    } catch (err) {
+        console.error("Lỗi lấy đơn hàng:", err.message);
+        res.status(500).json({ message: "Lỗi server." });
+    }
+});
+
+// GET /api/orders/me (Lấy đơn hàng của customer đang đăng nhập)
 app.get("/api/orders/me", protect, async (req, res) => {
     try {
-        // Lấy thông tin orders
         const ordersResult = await pool.query(
-            "SELECT id, total, status, created_at FROM orders WHERE user_id=$1 ORDER BY created_at DESC",
-            [req.userId]
+            `SELECT id, order_tracking_number, total_price, total_quantity, 
+                    status, date_created 
+             FROM orders WHERE customer_id=$1 ORDER BY date_created DESC`,
+            [req.customerId]
         );
 
         const orders = ordersResult.rows;
@@ -169,25 +239,32 @@ app.get("/api/orders/me", protect, async (req, res) => {
             return res.json([]);
         }
 
-        // Lấy tất cả Order ID để truy vấn order_items một lần
+        // Lấy order items
         const orderIds = orders.map(o => o.id);
-        
         const itemsResult = await pool.query(
-            `SELECT order_id, product_id, quantity, price 
-             FROM order_items 
-             WHERE order_id = ANY($1::int[])`, 
+            `SELECT order_id, product_id, quantity, unit_price, image_url 
+             FROM order_item WHERE order_id = ANY($1::int[])`, 
             [orderIds]
         );
         
         const itemsMap = itemsResult.rows.reduce((acc, item) => {
             if (!acc[item.order_id]) acc[item.order_id] = [];
-            acc[item.order_id].push(item);
+            acc[item.order_id].push({
+                productId: item.product_id,
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unit_price),
+                imageUrl: item.image_url
+            });
             return acc;
         }, {});
 
-        // Kết hợp items vào mỗi order
         const ordersWithItems = orders.map(order => ({
-            ...order,
+            id: order.id,
+            trackingNumber: order.order_tracking_number,
+            totalPrice: parseFloat(order.total_price),
+            totalQuantity: order.total_quantity,
+            status: order.status,
+            dateCreated: order.date_created,
             items: itemsMap[order.id] || []
         }));
 

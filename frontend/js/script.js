@@ -8,10 +8,38 @@
 
 // ---------------- utilities ----------------
 const money = v => v.toLocaleString('vi-VN') + ' ₫';
+const formatDateTime = v => new Date(v).toLocaleString('vi-VN');
 const uid = () => Math.random().toString(36).slice(2,9);
 
 const LS = localStorage;
 const KEY_CART = 'demo_cart_v1';
+const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v1';
+const SAMPLE_PRODUCTS = [
+    {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun co dãn, thoáng mát.',img:'https://picsum.photos/seed/t1/800/600'},
+    {id:'p2',title:'Quần jean',price:499000,category:'Quần',desc:'Quần jean nam form ôm.',img:'https://picsum.photos/seed/t2/800/600'},
+    {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang.',img:'https://picsum.photos/seed/t3/800/600'},
+    {id:'p4',title:'Nón lưỡi trai',price:99000,category:'Phụ kiện',desc:'Nón chất liệu nhẹ.',img:'https://picsum.photos/seed/t4/800/600'},
+    {id:'p5',title:'Áo khoác',price:350000,category:'Áo',desc:'Áo khoác ấm cho mùa đông.',img:'https://picsum.photos/seed/t5/800/600'}
+];
+function ensureSampleProductsSeeded(){
+    if(!LS.getItem(KEY_FALLBACK_PRODUCTS)){
+        LS.setItem(KEY_FALLBACK_PRODUCTS, JSON.stringify(SAMPLE_PRODUCTS));
+    }
+}
+function loadSampleProducts(){
+    ensureSampleProductsSeeded();
+    try {
+        return JSON.parse(LS.getItem(KEY_FALLBACK_PRODUCTS)) || SAMPLE_PRODUCTS;
+    } catch (e) {
+        return SAMPLE_PRODUCTS;
+    }
+}
+function useSampleProductsFallback(){
+    products = loadSampleProducts();
+    renderCategories();
+    renderProducts();
+    showFlash('Đang dùng dữ liệu mẫu (offline)');
+}
 
 // ---------------- state ----------------
 let products = []; // Sẽ lấy từ API Catalogue
@@ -28,6 +56,7 @@ const cartItemsWrap = document.getElementById('cartItems');
 const subtotalText = document.getElementById('subtotalText');
 const userArea = document.getElementById('userArea');
 const modals = document.getElementById('modals');
+const ordersButton = document.getElementById('btnOrders');
 
 // ---------------- Helpers ----------------
 function getToken() { return LS.getItem('userToken'); }
@@ -57,12 +86,13 @@ async function fetchProducts() {
         const response = await fetch(window.API_ENDPOINTS.PRODUCTS.LIST);
         if (response.ok) {
             products = await response.json();
+            LS.setItem(KEY_FALLBACK_PRODUCTS, JSON.stringify(products));
             renderCategories();
             renderProducts();
         }
     } catch (error) {
         console.error("Lỗi tải sản phẩm:", error);
-        showFlash("Không thể kết nối đến Catalogue Service");
+        useSampleProductsFallback();
     }
 }
 
@@ -168,7 +198,10 @@ function openProductModal(p){
 function renderUserArea(){
     userArea.innerHTML='';
     if(currentUser && getToken()){
-        userArea.innerHTML = `<div class='muted'>Xin chào ${currentUser.name}</div><button id='btnLogout'>Đăng xuất</button>`;
+        const displayName = currentUser.firstName && currentUser.lastName 
+            ? `${currentUser.firstName} ${currentUser.lastName}` 
+            : (currentUser.firstName || 'User');
+        userArea.innerHTML = `<div class='muted'>Xin chào ${displayName}</div><button id='btnLogout'>Đăng xuất</button>`;
         document.getElementById('btnLogout').onclick = ()=>{ 
             currentUser=null; LS.removeItem('userToken'); LS.removeItem('storedUser');
             renderUserArea(); showFlash('Đã đăng xuất'); 
@@ -195,56 +228,114 @@ function openLoginModal(){
         const email = wrap.querySelector('#inEmail').value;
         const pass = wrap.querySelector('#inPass').value;
         const name = wrap.querySelector('#inName').value;
+        
+        if (!email || !pass || !name) {
+            alert("Vui lòng điền đầy đủ thông tin");
+            return;
+        }
+
+        // Split name into first and last name
+        const nameParts = name.trim().split(/\s+/);
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || firstName;
+
         try {
-            const res = await fetch(window.API_ENDPOINTS.AUTH.REGISTER, {
+            const url = window.API_ENDPOINTS.AUTH.REGISTER;
+            console.log('📤 REGISTER:', {url, email, firstName, lastName});
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({email, password: pass, name})
+                body: JSON.stringify({email, password: pass, firstName, lastName})
             });
-            if(res.ok) { alert("Đăng ký thành công!"); } else { alert("Lỗi đăng ký"); }
-        } catch(e) { alert("Lỗi kết nối Gateway"); }
+            console.log('📥 REGISTER Response:', {status: res.status, ok: res.ok});
+            const data = await res.json();
+            console.log('📄 REGISTER Data:', data);
+            if(res.ok) { 
+                LS.setItem('userToken', data.token);
+                LS.setItem('storedUser', JSON.stringify(data.customer));
+                currentUser = data.customer;
+                wrap.remove(); 
+                renderUserArea();
+                alert("Đăng ký thành công!"); 
+            } else { 
+                alert(data.message || "Lỗi đăng ký"); 
+            }
+        } catch(e) { 
+            console.error('❌ REGISTER Error:', e);
+            alert("Lỗi kết nối: " + e.message); 
+        }
     };
 
     wrap.querySelector('#btnLogin').onclick = async () => {
         const email = wrap.querySelector('#inEmail').value;
         const pass = wrap.querySelector('#inPass').value;
         try {
-            const res = await fetch(window.API_ENDPOINTS.AUTH.LOGIN, {
+            const url = window.API_ENDPOINTS.AUTH.LOGIN;
+            console.log('📤 LOGIN:', {url, email});
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({email, password: pass})
             });
+            console.log('📥 LOGIN Response:', {status: res.status, ok: res.ok});
             const data = await res.json();
+            console.log('📄 LOGIN Data:', data);
             if(res.ok) {
                 LS.setItem('userToken', data.token);
-                LS.setItem('storedUser', JSON.stringify(data.user));
-                currentUser = data.user;
+                LS.setItem('storedUser', JSON.stringify(data.customer));
+                currentUser = data.customer;
                 wrap.remove(); renderUserArea();
-            } else { alert(data.message); }
-        } catch(e) { alert("Lỗi kết nối Gateway"); }
+            } else { 
+                alert(data.message || "Lỗi đăng nhập"); 
+            }
+        } catch(e) { 
+            console.error('❌ LOGIN Error:', e);
+            alert("Lỗi kết nối: " + e.message); 
+        }
     };
 }
 
 // ---------------- Checkout ----------------
-document.getElementById('btnCheckout')?.onclick = () => {
-    if (!getToken()) { alert("Vui lòng đăng nhập"); openLoginModal(); return; }
-    if (Object.keys(cart).length === 0) { alert("Giỏ hàng trống"); return; }
-    openCheckoutModal();
-};
+const checkoutBtn = document.getElementById('btnCheckout');
+if (checkoutBtn) {
+    checkoutBtn.onclick = () => {
+        if (!getToken()) { alert("Vui lòng đăng nhập"); openLoginModal(); return; }
+        if (Object.keys(cart).length === 0) { alert("Giỏ hàng trống"); return; }
+        openCheckoutModal();
+    };
+}
 
 function openCheckoutModal(){
     const html = `
         <h3>Thanh toán</h3>
+        <input id='ch_name' placeholder='Tên' style='width:100%;margin-bottom:8px'>
+        <input id='ch_street' placeholder='Địa chỉ' style='width:100%;margin-bottom:8px'>
         <input id='ch_phone' placeholder='Số điện thoại' style='width:100%;margin-bottom:8px'>
-        <textarea id='ch_addr' placeholder='Địa chỉ' style='width:100%'></textarea>
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
     wrap.querySelector('#payNow').onclick = async () => {
         const items = Object.entries(cart).map(([id, qty]) => {
             const p = products.find(x => x.id == id);
-            return { id, quantity: qty, price: p.price };
+            return { 
+                productId: id, 
+                quantity: qty, 
+                unitPrice: p.price,
+                imageUrl: p.img
+            };
         });
-        const total = items.reduce((s,i) => s + i.price * i.quantity, 0) + 30000;
+        const shippingFee = 30000;
+        const totalPrice = items.reduce((s,i) => s + i.unitPrice * i.quantity, 0) + shippingFee;
+        const totalQuantity = items.reduce((s,i) => s + i.quantity, 0);
+
+        const shippingAddress = {
+            name: wrap.querySelector('#ch_name').value,
+            street: wrap.querySelector('#ch_street').value,
+            phone: wrap.querySelector('#ch_phone').value,
+            city: 'N/A',
+            state: 'N/A',
+            country: 'Vietnam',
+            zipCode: '000000'
+        };
 
         try {
             const res = await fetch(window.API_ENDPOINTS.ORDERS.CREATE, {
@@ -253,21 +344,89 @@ function openCheckoutModal(){
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${getToken()}`
                 },
-                body: JSON.stringify({ items, total })
+                body: JSON.stringify({ 
+                    items, 
+                    totalPrice,
+                    totalQuantity,
+                    shippingAddress 
+                })
             });
+            const data = await res.json();
             if(res.ok) {
-                const data = await res.json();
-                alert(`Đặt hàng thành công! Mã đơn: ${data.orderId}`);
+                alert(`Đặt hàng thành công! Mã đơn: ${data.trackingNumber}`);
                 cart = {}; saveCart(); renderCart(); wrap.remove();
+            } else {
+                alert(data.message || "Lỗi đặt hàng");
             }
-        } catch(e) { alert("Lỗi đặt hàng"); }
+        } catch(e) { 
+            console.error(e);
+            alert("Lỗi đặt hàng"); 
+        }
     };
+}
+
+async function fetchMyOrders(){
+    const token = getToken();
+    const response = await fetch(window.API_ENDPOINTS.ORDERS.MY_ORDERS, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if(!response.ok){
+        const text = await response.text().catch(()=> '');
+        throw new Error(text || 'Không thể tải đơn hàng');
+    }
+    return response.json();
+}
+
+function openOrdersModal(orders){
+    const html = `
+        <h3>Đơn hàng của bạn</h3>
+        <div id="ordersList" style="max-height:400px;overflow:auto;margin-top:12px"></div>
+        <div style="text-align:right;margin-top:12px">
+            <button id="ordersClose" style="padding:8px;border-radius:8px">Đóng</button>
+        </div>`;
+    const wrap = openModal(html);
+    wrap.querySelector('#ordersClose').onclick = ()=>wrap.remove();
+    const list = wrap.querySelector('#ordersList');
+    if(!orders.length){
+        list.innerHTML = '<div class="muted">Chưa có đơn hàng nào.</div>';
+        return;
+    }
+    orders.forEach(order => {
+        const card = document.createElement('div');
+        card.style.cssText = 'border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:12px';
+        const items = (order.items || []).map(it => `<div class="row" style="font-size:13px"><span>Sản phẩm ${it.productId} x ${it.quantity}</span><span>${money(it.unitPrice * it.quantity)}</span></div>`).join('');
+        card.innerHTML = `
+            <div class="row" style="font-weight:600">
+                <span>Đơn hàng: ${order.trackingNumber}</span>
+                <span>${order.status}</span>
+            </div>
+            <div class="muted" style="margin:4px 0">${formatDateTime(order.dateCreated)}</div>
+            <div class="muted" style="margin:4px 0">Tổng: ${money(order.totalPrice)}</div>
+            <div style="margin-top:6px">${items || '<div class="muted">Không có sản phẩm</div>'}</div>`;
+        list.appendChild(card);
+    });
+}
+
+async function handleOrdersClick(){
+    if(!getToken()){
+        alert('Vui lòng đăng nhập để xem đơn hàng.');
+        openLoginModal();
+        return;
+    }
+    try {
+        const orders = await fetchMyOrders();
+        openOrdersModal(orders);
+    } catch (error) {
+        console.error('Lỗi lấy đơn hàng:', error);
+        alert('Không thể tải đơn hàng. Vui lòng thử lại sau.');
+    }
 }
 
 // ---------------- Init ----------------
 function init(){
     checkTokenAndInitUser();
     renderUserArea();
+    ensureSampleProductsSeeded();
     fetchProducts(); // Lấy sản phẩm thực tế từ DB
     
     qInput.oninput = renderProducts;
@@ -278,6 +437,9 @@ function init(){
     document.getElementById('btnClearCart').onclick = () => {
         if(confirm('Xóa giỏ hàng?')){ cart={}; saveCart(); renderCart(); }
     };
+    if (ordersButton) {
+        ordersButton.onclick = handleOrdersClick;
+    }
 }
 
 init();

@@ -1,25 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalogue-service
+  name: order-db
   namespace: ecommerce
   labels:
-    app: catalogue-service
+    app: order-db
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: catalogue-service
+      app: order-db
   template:
     metadata:
       labels:
-        app: catalogue-service
+        app: order-db
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: worker-node
       containers:
-      - name: catalogue-service
-        image: huuhai123/catalogue-service:latest
+      - name: postgres
+        image: postgres:14-alpine
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -29,34 +27,36 @@ spec:
             memory: "256Mi"
             cpu: "200m"
         env:
-        - name: PORT
-          value: "3002"
-        - name: DB_HOST
-          value: "catalogue-db"
-        - name: DB_USER
+        - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: ecommerce-secrets
               key: DB_USER
-        - name: DB_PASSWORD
+        - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: ecommerce-secrets
               key: DB_PASSWORD
-        - name: DB_DATABASE
-          value: "catalogue_db"
+        - name: POSTGRES_DB
+          value: "order_db"
         ports:
-        - containerPort: 3002
+        - containerPort: 5432
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: pgdata
+        emptyDir: {} # For demo on k3d; replace with PVC for production
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: catalogue-service
+  name: order-db
   namespace: ecommerce
 spec:
   ports:
-  - port: 3002
-    targetPort: 3002
+  - port: 5432
+    targetPort: 5432
   selector:
-    app: catalogue-service
+    app: order-db
   type: ClusterIP

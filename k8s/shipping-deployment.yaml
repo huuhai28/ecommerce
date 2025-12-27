@@ -33,7 +33,7 @@ spec:
               name: ecommerce-secrets
               key: RABBITMQ_URL
         - name: DB_HOST
-          value: "postgres"
+          value: "shipping-db"
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -45,9 +45,6 @@ spec:
               name: ecommerce-secrets
               key: DB_PASSWORD
         - name: DB_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_DATABASE
+          value: "shipping_db"
         - name: DB_PORT
           value: "5432"

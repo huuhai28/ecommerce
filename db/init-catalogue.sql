@@ -1,28 +1,7 @@
--- Init script for ecommerce sample DB (Fullstack Version)
--- Creates tables and inserts sample products
+-- Init script for CATALOGUE service database
+-- Creates product and category tables
 
 BEGIN;
-
--- ==================== CUSTOMER & ADDRESS ====================
-
-CREATE TABLE IF NOT EXISTS customer (
-  id SERIAL PRIMARY KEY,
-  first_name VARCHAR(255) NOT NULL,
-  last_name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash TEXT,
-  date_created TIMESTAMP DEFAULT NOW(),
-  last_updated TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS address (
-  id SERIAL PRIMARY KEY,
-  street VARCHAR(255),
-  city VARCHAR(255),
-  state VARCHAR(255),
-  country VARCHAR(255),
-  zip_code VARCHAR(255)
-);
 
 -- ==================== PRODUCT CATEGORY & PRODUCT ====================
 
@@ -45,30 +24,6 @@ CREATE TABLE IF NOT EXISTS product (
   category_id BIGINT REFERENCES product_category(id)
 );
 
--- ==================== ORDER & ORDER ITEMS ====================
-
-CREATE TABLE IF NOT EXISTS orders (
-  id SERIAL PRIMARY KEY,
-  order_tracking_number VARCHAR(255) UNIQUE,
-  total_price DECIMAL(19,2),
-  total_quantity INTEGER,
-  billing_address_id BIGINT REFERENCES address(id),
-  customer_id BIGINT REFERENCES customer(id),
-  shipping_address_id BIGINT REFERENCES address(id),
-  status VARCHAR(128) DEFAULT 'PENDING',
-  date_created TIMESTAMP DEFAULT NOW(),
-  last_updated TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS order_item (
-  id SERIAL PRIMARY KEY,
-  image_url VARCHAR(255),
-  quantity INTEGER,
-  unit_price DECIMAL(19,2),
-  order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
-  product_id BIGINT REFERENCES product(id)
-);
-
 -- ==================== COUNTRY & STATE ====================
 
 CREATE TABLE IF NOT EXISTS country (
@@ -81,26 +36,6 @@ CREATE TABLE IF NOT EXISTS state (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   country_id SMALLINT REFERENCES country(id)
-);
-
--- ==================== PAYMENTS & SHIPPING ====================
-
-CREATE TABLE IF NOT EXISTS payment (
-  id SERIAL PRIMARY KEY,
-  order_id BIGINT REFERENCES orders(id),
-  provider VARCHAR(255),
-  amount DECIMAL(19,2),
-  status VARCHAR(128),
-  date_created TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS shipping (
-  id SERIAL PRIMARY KEY,
-  order_id BIGINT REFERENCES orders(id),
-  customer_id BIGINT REFERENCES customer(id),
-  status VARCHAR(128) DEFAULT 'pending',
-  date_created TIMESTAMP DEFAULT NOW(),
-  processed_at TIMESTAMP
 );
 
 -- ==================== SEED DATA ====================
@@ -139,5 +74,3 @@ INSERT INTO state(name, country_id) VALUES
 ON CONFLICT DO NOTHING;
 
 COMMIT;
-
--- End of script

@@ -1,17 +1,87 @@
 version: '3.8'
 
 services:
-# dùng chung
-  postgres_db:
+# Tách database riêng cho từng service
+
+  user_db:
     image: postgres:14-alpine
-    container_name: postgres_db_main
+    container_name: user_db
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_DB: user_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - user_db_data:/var/lib/postgresql/data
+      - ./db/init-user.sql:/docker-entrypoint-initdb.d/init-user.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  catalogue_db:
+    image: postgres:14-alpine
+    container_name: catalogue_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: catalogue_db
+    volumes:
+      - catalogue_db_data:/var/lib/postgresql/data
+      - ./db/init-catalogue.sql:/docker-entrypoint-initdb.d/init-catalogue.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order_db:
+    image: postgres:14-alpine
+    container_name: order_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: order_db
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+      - ./db/init-order.sql:/docker-entrypoint-initdb.d/init-order.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  payment_db:
+    image: postgres:14-alpine
+    container_name: payment_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: payment_db
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+      - ./db/init-payment.sql:/docker-entrypoint-initdb.d/init-payment.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  shipping_db:
+    image: postgres:14-alpine
+    container_name: shipping_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: shipping_db
+    volumes:
+      - shipping_db_data:/var/lib/postgresql/data
+      - ./db/init-shipping.sql:/docker-entrypoint-initdb.d/init-shipping.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -28,15 +98,15 @@ services:
     restart: always
     environment:
       PORT: 3004
-      DB_HOST: postgres_db
-      DB_USER: ${DB_USER}
+      DB_HOST: user_db
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: 123456
-      DB_DATABASE: ${DB_DATABASE}
+      DB_DATABASE: user_db
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3004:3004"
     depends_on:
-      postgres_db:
+      user_db:
         condition: service_healthy
 
   catalogue_service:
@@ -47,15 +117,15 @@ services:
     restart: always
     environment:
       PORT: 3002
-      DB_HOST: postgres_db
-      DB_USER: ${DB_USER}
+      DB_HOST: catalogue_db
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: 123456
-      DB_DATABASE: ${DB_DATABASE}
+      DB_DATABASE: catalogue_db
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3002:3002"
     depends_on:
-      postgres_db:
+      catalogue_db:
         condition: service_healthy
 
   order_service:
@@ -66,17 +136,17 @@ services:
     restart: always
     environment:
       PORT: 3003
-      DB_HOST: postgres_db
-      DB_USER: ${DB_USER}
+      DB_HOST: order_db
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: 123456
-      DB_DATABASE: ${DB_DATABASE}
+      DB_DATABASE: order_db
       JWT_SECRET: ${JWT_SECRET}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       PAYMENT_URL: http://payment_service:3005/api
     ports:
       - "3003:3003"
     depends_on:
-      postgres_db:
+      order_db:
         condition: service_healthy
       payment_service:
         condition: service_started
@@ -84,7 +154,7 @@ services:
     
   frontend:
     build:
-      context: ./fontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: ecommerce_frontend
     restart: always
@@ -95,6 +165,21 @@ services:
       - catalogue_service
       - order_service
       - rabbitmq
+
+  api_gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: ecommerce_api_gateway
+    restart: always
+    ports:
+      - "30004:80"
+    depends_on:
+      - user_service
+      - catalogue_service
+      - order_service
+      - payment_service
+      - cart_service
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -120,14 +205,15 @@ services:
     restart: always
     environment:
       PORT: 3005
-      DB_HOST: postgres_db
-      DB_USER: ${DB_USER}
+      DB_HOST: payment_db
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: 123456
-      DB_DATABASE: ${DB_DATABASE}
+      DB_DATABASE: payment_db
     ports:
       - "3005:3005"
     depends_on:
-      - postgres_db
+      payment_db:
+        condition: service_healthy
 
   cart_service:
     build:
@@ -149,16 +235,20 @@ services:
     environment:
       PORT: 3007
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-      DB_HOST: postgres_db
-      DB_USER: ${DB_USER}
+      DB_HOST: shipping_db
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: 123456
-      DB_DATABASE: ${DB_DATABASE}
+      DB_DATABASE: shipping_db
     ports:
       - "3007:3007"
     depends_on:
       - rabbitmq
-      - postgres_db
+      - shipping_db
 
 volumes:
-  postgres_data:
+  user_db_data:
+  catalogue_db_data:
+  order_db_data:
+  payment_db_data:
+  shipping_db_data:
 

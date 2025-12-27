@@ -32,7 +32,7 @@ spec:
         - name: PORT
           value: "3004"
         - name: DB_HOST
-          value: "postgres"
+          value: "user-db"
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -44,10 +44,7 @@ spec:
               name: ecommerce-secrets
               key: DB_PASSWORD
         - name: DB_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_DATABASE
+          value: "user_db"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:

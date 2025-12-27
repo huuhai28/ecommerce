@@ -1,10 +1,10 @@
 const express = require('express');
-const cors = require('cors');
+// CORS handled by API Gateway
 
 const app = express();
 const PORT = process.env.PORT || 3006;
 
-app.use(cors());
+// CORS handled by API Gateway
 app.use(express.json());
 
 // In-memory store: { userId: { key: value } }

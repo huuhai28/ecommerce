@@ -5,7 +5,6 @@ const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cors = require('cors');
 
 const app = express();
 // Lấy cổng từ biến môi trường (Docker Compose sẽ truyền vào 3001)
@@ -13,7 +12,7 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET; 
 
 // ---------------- Middleware ----------------
-app.use(cors());
+// CORS handled by API Gateway
 app.use(express.json());
 
 // ---------------- Kết nối PostgreSQL ----------------
@@ -38,7 +37,8 @@ function protect(req, res, next) {
         if (err) {
             return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" }); 
         }
-        req.userId = decoded.userId;
+        // Sử dụng customerId theo schema mới
+        req.customerId = decoded.customerId;
         next();
     });
 }
@@ -48,15 +48,36 @@ function protect(req, res, next) {
 // POST /api/register
 app.post("/api/register", async (req, res) => {
     try {
-        const { email, name, password } = req.body;
+        const { email, firstName, lastName, password } = req.body;
+        
+        if (!email || !firstName || !lastName || !password) {
+            return res.status(400).json({ message: "Thiếu thông tin bắt buộc." });
+        }
+
         const hash = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            "INSERT INTO users (email, name, password_hash) VALUES ($1,$2,$3) RETURNING id",
-            [email, name, hash]
+            "INSERT INTO customer (email, first_name, last_name, password_hash, date_created) VALUES ($1,$2,$3,$4,NOW()) RETURNING id, first_name, last_name, email",
+            [email, firstName, lastName, hash]
         );
 
-        res.status(201).json({ message: "Đăng ký thành công", userId: result.rows[0].id });
+        const newCustomer = result.rows[0];
+        const token = jwt.sign(
+            { customerId: newCustomer.id },
+            JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.status(201).json({ 
+            message: "Đăng ký thành công",
+            token,
+            customer: { 
+                id: newCustomer.id, 
+                firstName: newCustomer.first_name, 
+                lastName: newCustomer.last_name, 
+                email: newCustomer.email 
+            } 
+        });
 
     } catch (err) {
         if (err.code === "23505") { 
@@ -72,34 +93,69 @@ app.post("/api/login", async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email và password là bắt buộc." });
+        }
+
         const result = await pool.query(
-            "SELECT id, name, email, password_hash FROM users WHERE email=$1",
+            "SELECT id, first_name, last_name, email, password_hash FROM customer WHERE email=$1",
             [email]
         );
 
         if (result.rows.length === 0)
             return res.status(401).json({ message: "Email hoặc mật khẩu không chính xác." });
 
-        const user = result.rows[0];
+        const customer = result.rows[0];
 
-        const ok = await bcrypt.compare(password, user.password_hash);
+        const ok = await bcrypt.compare(password, customer.password_hash);
         if (!ok)
             return res.status(401).json({ message: "Email hoặc mật khẩu không chính xác." });
 
         const token = jwt.sign(
-            { userId: user.id },
+            { customerId: customer.id },
             JWT_SECRET,
             { expiresIn: "1d" }
         );
 
         res.json({ 
             token, 
-            user: { id: user.id, name: user.name, email: user.email } 
+            customer: { 
+                id: customer.id, 
+                firstName: customer.first_name, 
+                lastName: customer.last_name, 
+                email: customer.email 
+            } 
         });
 
     } catch (err) {
         console.error("Lỗi đăng nhập:", err.message);
         res.status(500).json({ message: "Lỗi server trong quá trình đăng nhập." });
+    }
+});
+
+// GET /api/customers/:id (Lấy thông tin customer)
+app.get("/api/customers/:id", protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            "SELECT id, first_name, last_name, email, date_created FROM customer WHERE id=$1",
+            [id]
+        );
+
+        if (result.rows.length === 0)
+            return res.status(404).json({ message: "Không tìm thấy khách hàng." });
+
+        const customer = result.rows[0];
+        res.json({ 
+            id: customer.id, 
+            firstName: customer.first_name, 
+            lastName: customer.last_name, 
+            email: customer.email,
+            dateCreated: customer.date_created
+        });
+    } catch (err) {
+        console.error("Lỗi lấy customer:", err.message);
+        res.status(500).json({ message: "Lỗi server." });
     }
 });
 

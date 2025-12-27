@@ -1,12 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
-const cors = require('cors');
+// CORS handled by API Gateway
 
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-app.use(cors());
+// CORS handled by API Gateway
 app.use(express.json());
 
 const pool = new Pool({
