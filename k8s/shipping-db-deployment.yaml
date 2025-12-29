@@ -1,3 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipping-db-init
+  namespace: ecommerce
+data:
+  init-shipping.sql: |
+    CREATE TABLE IF NOT EXISTS shipping (
+      id SERIAL PRIMARY KEY,
+      order_id BIGINT,
+      user_id BIGINT,
+      address TEXT,
+      items JSONB,
+      status VARCHAR(128) DEFAULT 'pending',
+      date_created TIMESTAMP DEFAULT NOW(),
+      processed_at TIMESTAMP
+    );
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,10 +63,15 @@ spec:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
           subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
       volumes:
       - name: pgdata
         persistentVolumeClaim:
           claimName: shipping-db-pvc
+      - name: init-script
+        configMap:
+          name: shipping-db-init
 ---
 apiVersion: v1
 kind: Service
