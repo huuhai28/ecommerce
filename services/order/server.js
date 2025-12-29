@@ -75,8 +75,16 @@ app.post("/api/orders", protect, async (req, res) => {
     const { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
     const customerId = req.customerId;
 
-    if (!items || !totalPrice || items.length === 0) {
-        return res.status(400).json({ message: "Thiếu thông tin giỏ hàng hoặc tổng tiền." });
+    console.log('📦 Order Request:', { items: items?.length, totalPrice, totalQuantity, customerId });
+
+    if (!items || items.length === 0) {
+        console.log('❌ Validation failed: items empty');
+        return res.status(400).json({ message: "Giỏ hàng trống." });
+    }
+    
+    if (!totalPrice || totalPrice <= 0) {
+        console.log('❌ Validation failed: totalPrice invalid', totalPrice);
+        return res.status(400).json({ message: "Tổng tiền không hợp lệ." });
     }
     
     const client = await pool.connect();
