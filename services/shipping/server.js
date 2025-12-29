@@ -16,7 +16,7 @@ const pool = new Pool({
 async function ensureTable(){
   await pool.query(`CREATE TABLE IF NOT EXISTS shipping (
     id SERIAL PRIMARY KEY,
-    order_id INT REFERENCES orders(id),
+    order_id INT,
     user_id INT,
     address JSONB,
     items JSONB,

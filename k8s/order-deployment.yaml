@@ -18,7 +18,7 @@ spec:
       containers:
       - name: order-service
         image: huuhai123/order-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "128Mi"
