@@ -72,20 +72,23 @@ function generateTrackingNumber() {
 
 // POST /api/orders (Tạo đơn hàng mới)
 app.post("/api/orders", protect, async (req, res) => {
-    const { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
+    let { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
     const customerId = req.customerId;
 
-    console.log('📦 Order Request:', { items: items?.length, totalPrice, totalQuantity, customerId });
+    console.log('📦 Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId });
 
     if (!items || items.length === 0) {
         console.log('❌ Validation failed: items empty');
         return res.status(400).json({ message: "Giỏ hàng trống." });
     }
     
-    if (!totalPrice || totalPrice <= 0) {
-        console.log('❌ Validation failed: totalPrice invalid', totalPrice);
-        return res.status(400).json({ message: "Tổng tiền không hợp lệ." });
-    }
+    // Tính lại totalPrice từ items (không tin client)
+    const SHIPPING_FEE = 30000;
+    const calculatedTotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) + SHIPPING_FEE;
+    totalPrice = calculatedTotal;
+    totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    console.log('📦 Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId });
     
     const client = await pool.connect();
     
