@@ -327,10 +327,16 @@ function openCheckoutModal(){
         const totalPrice = items.reduce((s,i) => s + i.unitPrice * i.quantity, 0) + shippingFee;
         const totalQuantity = items.reduce((s,i) => s + i.quantity, 0);
 
+        const name = wrap.querySelector('#ch_name').value;
+        const phone = wrap.querySelector('#ch_phone').value;
+        const street = wrap.querySelector('#ch_street').value;
+        
+        // Backend address schema chỉ cần street, city, state, country, zipCode
+        // Name và phone lưu trong street để không mất thông tin
+        const fullAddress = `${name} - ${phone} - ${street}`;
+        
         const shippingAddress = {
-            name: wrap.querySelector('#ch_name').value,
-            street: wrap.querySelector('#ch_street').value,
-            phone: wrap.querySelector('#ch_phone').value,
+            street: fullAddress,
             city: 'N/A',
             state: 'N/A',
             country: 'Vietnam',

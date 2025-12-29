@@ -44,9 +44,11 @@ spec:
         volumeMounts:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
+          subPath: pgdata
       volumes:
       - name: pgdata
-        emptyDir: {} # For demo on k3d; replace with PVC for production
+        persistentVolumeClaim:
+          claimName: payment-db-pvc
 ---
 apiVersion: v1
 kind: Service
