@@ -38,6 +38,13 @@ if (useGateway) {
         ORDERS: {
             CREATE: `${gatewayBase}/orders`,
             MY_ORDERS: `${gatewayBase}/orders/me`
+        },
+        SHIPPING: {
+            CALCULATE: `${gatewayBase}/shipping/calculate`,
+            CREATE: `${gatewayBase}/shipping`
+        },
+        PAYMENT: {
+            PROCESS: `${gatewayBase}/payments`
         }
     };
     activeMode = `gateway -> ${gatewayBase}`;
@@ -45,6 +52,8 @@ if (useGateway) {
     const usersBase = buildBase(API_CONFIG.userHost, API_CONFIG.userPort || 3004);
     const catalogueBase = buildBase(API_CONFIG.catalogueHost, API_CONFIG.cataloguePort || 3002);
     const ordersBase = buildBase(API_CONFIG.orderHost, API_CONFIG.orderPort || 3003);
+    const shippingBase = buildBase(API_CONFIG.shippingHost, API_CONFIG.shippingPort || 3005);
+    const paymentBase = buildBase(API_CONFIG.paymentHost, API_CONFIG.paymentPort || 3006);
     API_ENDPOINTS = {
         AUTH: {
             LOGIN: `${usersBase}/login`,
@@ -57,6 +66,13 @@ if (useGateway) {
         ORDERS: {
             CREATE: `${ordersBase}/orders`,
             MY_ORDERS: `${ordersBase}/orders/me`
+        },
+        SHIPPING: {
+            CALCULATE: `${shippingBase}/shipping/calculate`,
+            CREATE: `${shippingBase}/shipping`
+        },
+        PAYMENT: {
+            PROCESS: `${paymentBase}/payments`
         }
     };
     activeMode = `direct services -> users:${usersBase}, catalogue:${catalogueBase}, orders:${ordersBase}`;

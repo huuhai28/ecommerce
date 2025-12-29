@@ -54,6 +54,22 @@ app.use('/api/orders', logProxyHit('orders'), createProxyMiddleware({
 }));
 console.log("🔗 Proxying /api/orders to http://order-service:3003");
 
+// Điều hướng Shipping sang Shipping Service (Cổng 3005)
+app.use('/api/shipping', logProxyHit('shipping'), createProxyMiddleware({
+    target: 'http://shipping-service:3005',
+    changeOrigin: true,
+    pathRewrite: { '^/api/shipping': '/api/shipping' }
+}));
+console.log("🔗 Proxying /api/shipping to http://shipping-service:3005");
+
+// Điều hướng Payment sang Payment Service (Cổng 3006)
+app.use('/api/payments', logProxyHit('payments'), createProxyMiddleware({
+    target: 'http://payment-service:3006',
+    changeOrigin: true,
+    pathRewrite: { '^/api/payments': '/api/payments' }
+}));
+console.log("🔗 Proxying /api/payments to http://payment-service:3006");
+
 // 3. Khởi chạy Gateway
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 API Gateway is running on port ${PORT}`);

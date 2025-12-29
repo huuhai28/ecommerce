@@ -15,6 +15,56 @@ spec:
       labels:
         app: order-db
     spec:
+      initContainers:
+      - name: init-db
+        image: postgres:14-alpine
+        command:
+          - sh
+          - -c
+          - |
+            until pg_isready -h localhost -p 5432; do
+              echo "Waiting for PostgreSQL to start..."
+              sleep 2
+            done
+            echo "PostgreSQL started, running init script..."
+            psql -U postgres -d order_db << 'EOF'
+            CREATE TABLE IF NOT EXISTS address (
+              id SERIAL PRIMARY KEY,
+              street VARCHAR(255),
+              city VARCHAR(255),
+              state VARCHAR(255),
+              country VARCHAR(255),
+              zip_code VARCHAR(255)
+            );
+            
+            CREATE TABLE IF NOT EXISTS orders (
+              id SERIAL PRIMARY KEY,
+              order_tracking_number VARCHAR(255) UNIQUE,
+              total_price DECIMAL(19,2),
+              total_quantity INTEGER,
+              billing_address_id BIGINT REFERENCES address(id),
+              customer_id BIGINT,
+              shipping_address_id BIGINT REFERENCES address(id),
+              status VARCHAR(128) DEFAULT 'PENDING',
+              date_created TIMESTAMP DEFAULT NOW(),
+              last_updated TIMESTAMP DEFAULT NOW()
+            );
+            
+            CREATE TABLE IF NOT EXISTS order_item (
+              id SERIAL PRIMARY KEY,
+              image_url VARCHAR(255),
+              quantity INTEGER,
+              unit_price DECIMAL(19,2),
+              order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+              product_id VARCHAR(255)
+            );
+            EOF
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
       containers:
       - name: postgres
         image: postgres:14-alpine

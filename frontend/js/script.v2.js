@@ -311,6 +311,12 @@ function openCheckoutModal(){
         <input id='ch_name' placeholder='Tên' style='width:100%;margin-bottom:8px'>
         <input id='ch_street' placeholder='Địa chỉ' style='width:100%;margin-bottom:8px'>
         <input id='ch_phone' placeholder='Số điện thoại' style='width:100%;margin-bottom:8px'>
+        <select id='ch_payment_method' style='width:100%;margin-bottom:8px;padding:8px'>
+            <option value='COD'>Thanh toán khi nhận hàng (COD)</option>
+            <option value='BANK_TRANSFER'>Chuyển khoản ngân hàng</option>
+            <option value='MOMO'>Ví MoMo</option>
+            <option value='VNPAY'>VNPay</option>
+        </select>
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
     wrap.querySelector('#payNow').onclick = async () => {
@@ -330,6 +336,12 @@ function openCheckoutModal(){
         const name = wrap.querySelector('#ch_name').value;
         const phone = wrap.querySelector('#ch_phone').value;
         const street = wrap.querySelector('#ch_street').value;
+        const paymentMethod = wrap.querySelector('#ch_payment_method').value;
+        
+        if (!name || !street || !phone) {
+            alert('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
         
         // Backend address schema chỉ cần street, city, state, country, zipCode
         // Name và phone lưu trong street để không mất thông tin
@@ -344,6 +356,31 @@ function openCheckoutModal(){
         };
 
         try {
+            // 1. Xử lý thanh toán trước
+            console.log('Processing payment...');
+            const paymentRes = await fetch(window.API_ENDPOINTS.PAYMENT.PROCESS, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({
+                    orderId: 0, // Tạm thời, sẽ update sau khi có orderId
+                    amount: totalPrice,
+                    method: paymentMethod
+                })
+            });
+            
+            if (!paymentRes.ok) {
+                const paymentError = await paymentRes.json();
+                alert('Lỗi thanh toán: ' + (paymentError.message || 'Vui lòng thử lại'));
+                return;
+            }
+            
+            const paymentData = await paymentRes.json();
+            console.log('Payment processed:', paymentData);
+            
+            // 2. Tạo đơn hàng
             const res = await fetch(window.API_ENDPOINTS.ORDERS.CREATE, {
                 method: 'POST',
                 headers: {
@@ -354,19 +391,21 @@ function openCheckoutModal(){
                     items, 
                     totalPrice,
                     totalQuantity,
-                    shippingAddress 
+                    shippingAddress,
+                    paymentId: paymentData.payment?.payment_id,
+                    paymentMethod: paymentMethod
                 })
             });
             const data = await res.json();
             if(res.ok) {
-                alert(`Đặt hàng thành công! Mã đơn: ${data.trackingNumber}`);
+                alert(`Đặt hàng thành công!\nMã đơn: ${data.trackingNumber}\nPhương thức: ${paymentMethod}`);
                 cart = {}; saveCart(); renderCart(); wrap.remove();
             } else {
                 alert(data.message || "Lỗi đặt hàng");
             }
         } catch(e) { 
             console.error(e);
-            alert("Lỗi đặt hàng"); 
+            alert("Lỗi đặt hàng: " + e.message); 
         }
     };
 }
