@@ -20,7 +20,7 @@ spec:
       containers:
       - name: user-service
         image: huuhai123/user-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "128Mi"

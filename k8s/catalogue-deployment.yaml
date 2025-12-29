@@ -20,7 +20,7 @@ spec:
       containers:
       - name: catalogue-service
         image: huuhai123/catalogue-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "128Mi"

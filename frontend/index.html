@@ -50,11 +50,12 @@
 
   <script>
     // Enable gateway mode BEFORE loading api.js
-    window.BACKEND_API_GATEWAY_IP = window.location.hostname;
+    // Hardcode to worker node IP to avoid hostname mismatch
+    window.BACKEND_API_GATEWAY_IP = "192.168.1.112";
     window.BACKEND_API_GATEWAY_PORT = 30004;
   </script>
   <script src="js/api.js" defer></script>
-  <script type="module" src="js/script.js"></script>
+  <script type="module" src="js/script.v2.js"></script>
 
 </body>
 </html>
