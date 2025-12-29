@@ -16,9 +16,9 @@ function buildBase(host, port, path = '/api') {
     return `${protocol}://${resolvedHost}${portPart}${normalizedPath}`;
 }
 
-const gatewayHost = window.BACKEND_API_GATEWAY_IP || API_CONFIG.gatewayHost || null;
+const gatewayHost = window.BACKEND_API_GATEWAY_IP || API_CONFIG.gatewayHost || '192.168.1.111';
 const gatewayPort = API_CONFIG.gatewayPort || window.BACKEND_API_GATEWAY_PORT || 30004;
-const useGateway = API_CONFIG.useGateway ?? Boolean(gatewayHost);
+const useGateway = API_CONFIG.useGateway ?? true;  // Always use gateway
 
 let API_ENDPOINTS = {};
 let activeMode = '';

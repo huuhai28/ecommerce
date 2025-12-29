@@ -13,6 +13,8 @@ spec:
       labels:
         app: api-gateway
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: master-node
       containers:
       - name: api-gateway
         image: huuhai123/ecommerce-gateway:latest
