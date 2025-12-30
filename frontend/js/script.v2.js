@@ -320,7 +320,7 @@ function openCheckoutModal(){
         <div id='qrCodeContainer' style='display:none;text-align:center;margin:15px 0;'>
             <p style='font-weight:bold;margin-bottom:10px'>Quét mã QR để chuyển khoản</p>
             <div id='qrCode' style='display:inline-block;padding:10px;background:#fff'></div>
-            <p style='font-size:12px;color:#666;margin-top:10px'>Tài khoản: 1234567890<br>Ngân hàng: Vietcombank<br>Tên: Shop MyShop</p>
+            <p style='font-size:12px;color:#666;margin-top:10px'>Tài khoản: 7998628112003<br>Ngân hàng: Vietcombank<br>Tên: Nguyễn Hữu Hải</p>
         </div>
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
@@ -332,9 +332,9 @@ function openCheckoutModal(){
     
     paymentMethodSelect.onchange = () => {
         if (paymentMethodSelect.value === 'BANK_TRANSFER') {
-            // Sinh QR từ bank transfer info
-            const bankInfo = 'BANK|1234567890|Vietcombank|Shop MyShop';
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(bankInfo)}`;
+            // Sinh QR từ thông tin Viet QR (VietCombank - Nguyen Huu Hai)
+            const bankInfo = '00020126360014vietcombank.vn.vn539946597998628112003540010305406111500370435405991.5963048060810010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(bankInfo)}`;
             qrCode.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="border:2px solid #ccc;padding:5px">`;
             qrContainer.style.display = 'block';
         } else {
