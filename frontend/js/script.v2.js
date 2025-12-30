@@ -317,8 +317,31 @@ function openCheckoutModal(){
             <option value='MOMO'>Ví MoMo</option>
             <option value='VNPAY'>VNPay</option>
         </select>
+        <div id='qrCodeContainer' style='display:none;text-align:center;margin:15px 0;'>
+            <p style='font-weight:bold;margin-bottom:10px'>Quét mã QR để chuyển khoản</p>
+            <div id='qrCode' style='display:inline-block;padding:10px;background:#fff'></div>
+            <p style='font-size:12px;color:#666;margin-top:10px'>Tài khoản: 1234567890<br>Ngân hàng: Vietcombank<br>Tên: Shop MyShop</p>
+        </div>
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
+    
+    // QR code generation using qrserver API (free, no library needed)
+    const paymentMethodSelect = wrap.querySelector('#ch_payment_method');
+    const qrContainer = wrap.querySelector('#qrCodeContainer');
+    const qrCode = wrap.querySelector('#qrCode');
+    
+    paymentMethodSelect.onchange = () => {
+        if (paymentMethodSelect.value === 'BANK_TRANSFER') {
+            // Sinh QR từ bank transfer info
+            const bankInfo = 'BANK|1234567890|Vietcombank|Shop MyShop';
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(bankInfo)}`;
+            qrCode.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="border:2px solid #ccc;padding:5px">`;
+            qrContainer.style.display = 'block';
+        } else {
+            qrContainer.style.display = 'none';
+        }
+    };
+    
     wrap.querySelector('#payNow').onclick = async () => {
         const items = Object.entries(cart).map(([id, qty]) => {
             const p = products.find(x => x.id == id);
@@ -356,8 +379,8 @@ function openCheckoutModal(){
         };
 
         try {
-            // 1. Xử lý thanh toán trước
-            console.log('Processing payment...');
+            // 1. Xử lý thanh toán (mock - không cần verify)
+            console.log('Processing payment with method:', paymentMethod);
             const paymentRes = await fetch(window.API_ENDPOINTS.PAYMENT.PROCESS, {
                 method: 'POST',
                 headers: {
@@ -365,7 +388,7 @@ function openCheckoutModal(){
                     'Authorization': `Bearer ${getToken()}`
                 },
                 body: JSON.stringify({
-                    orderId: 0, // Tạm thời, sẽ update sau khi có orderId
+                    orderId: null,
                     amount: totalPrice,
                     method: paymentMethod
                 })
@@ -398,7 +421,8 @@ function openCheckoutModal(){
             });
             const data = await res.json();
             if(res.ok) {
-                alert(`Đặt hàng thành công!\nMã đơn: ${data.trackingNumber}\nPhương thức: ${paymentMethod}`);
+                const methodName = paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : paymentMethod === 'COD' ? 'COD' : paymentMethod;
+                alert(`Đặt hàng thành công!\nMã đơn: ${data.trackingNumber}\nPhương thức: ${methodName}`);
                 cart = {}; saveCart(); renderCart(); wrap.remove();
             } else {
                 alert(data.message || "Lỗi đặt hàng");

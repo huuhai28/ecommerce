@@ -19,15 +19,20 @@ const pool = new Pool({
 
 // Simple payments API (mock)
 app.post('/api/payments', async (req, res) => {
-  const { orderId, amount, method } = req.body;
-  if (!orderId || !amount) return res.status(400).json({ message: 'orderId and amount required' });
+  const { amount, method } = req.body;
+  let { orderId } = req.body;
+  
+  if (!amount) return res.status(400).json({ message: 'amount required' });
+  
+  // orderId có thể null nếu payment được tạo trước order
+  orderId = orderId || null;
 
   try {
     // Insert a payment record (mock)
     const paymentId = 'pay_' + Date.now();
     const result = await pool.query(
       'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, payment_id, status',
-      [paymentId, orderId, method || 'mock', amount, 'paid', JSON.stringify({ method })]
+      [paymentId, orderId, method || 'COD', amount, 'completed', JSON.stringify({ method })]
     );
 
     res.json({ ok: true, payment: { id: result.rows[0].id, payment_id: result.rows[0].payment_id, status: result.rows[0].status } });
