@@ -1,3 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-db-init
+  namespace: ecommerce
+data:
+  init-payment.sql: |
+    CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      payment_id VARCHAR(255) UNIQUE NOT NULL,
+      order_id BIGINT,
+      provider VARCHAR(255),
+      amount DECIMAL(19,2),
+      status VARCHAR(128),
+      metadata JSONB,
+      date_created TIMESTAMP DEFAULT NOW()
+    );
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,10 +63,15 @@ spec:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
           subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
       volumes:
       - name: pgdata
         persistentVolumeClaim:
           claimName: payment-db-pvc
+      - name: init-script
+        configMap:
+          name: payment-db-init
 ---
 apiVersion: v1
 kind: Service
