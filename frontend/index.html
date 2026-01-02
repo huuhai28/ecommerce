@@ -3,27 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mini E‑commerce (Front-end only)</title>
+  <title>Ash - Fashion Store</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <div style="display:flex;align-items:center;flex:1">
-        <div class="brand">MyShop</div>
-        <div class="search">
-          <input id="q" placeholder="Tìm kiếm sản phẩm..." />
-          <select id="cat"><option value="all">Tất cả</option></select>
+    <header class="header-main">
+      <div class="header-content">
+        <div class="brand">Ash</div>
+        <nav class="main-nav">
+          <a href="#" class="nav-item">Home</a>
+          <a href="#" class="nav-item">Shop</a>
+          <a href="#" class="nav-item">Blog</a>
+          <a href="#" class="nav-item">About</a>
+          <a href="#" class="nav-item">Contact</a>
+        </nav>
+        <div class="header-actions">
+          <button id="btnOpenCart" class="btn-cart">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span id="cartCount">0</span>
+          </button>
+          <button id="btnOrders" class="btn-text">Đơn hàng</button>
+          <button id="btnAdmin" class="btn-text">Admin</button>
+          <div id="userArea"></div>
         </div>
       </div>
-
-      <nav>
-        <div id="userArea" class="row"></div>
-        <button id="btnAdmin">Admin</button>
-        <button id="btnOrders">Đơn hàng</button>
-        <button id="btnOpenCart">Giỏ (<span id="cartCount">0</span>)</button>
-      </nav>
     </header>
+
+    <section class="hero">
+      <div class="hero-content">
+        <h1>Super value deals</h1>
+        <p>on selected items</p>
+        <button class="btn-primary">Shop now</button>
+      </div>
+      <div class="hero-image">
+        <img src="https://via.placeholder.com/400x500/4a9b8e/ffffff?text=Fashion" alt="Fashion Model">
+      </div>
+    </section>
+
+    <section class="featured-section">
+      <h2>Featured Products</h2>
+    </section>
+
 
     <main>
       <div class="grid" id="productGrid"></div>
