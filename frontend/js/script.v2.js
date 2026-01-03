@@ -325,17 +325,15 @@ function openCheckoutModal(){
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
     
-    // QR code generation using qrserver API (free, no library needed)
+    // QR code display for VietQR (Nguyen Huu Hai - 79986281112003)
     const paymentMethodSelect = wrap.querySelector('#ch_payment_method');
     const qrContainer = wrap.querySelector('#qrCodeContainer');
     const qrCode = wrap.querySelector('#qrCode');
     
     paymentMethodSelect.onchange = () => {
         if (paymentMethodSelect.value === 'BANK_TRANSFER') {
-            // Sinh QR từ thông tin Viet QR (VietCombank - Nguyen Huu Hai)
-            const bankInfo = '00020126360014vietcombank.vn.vn539946597998628112003540010305406111500370435405991.5963048060810010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(bankInfo)}`;
-            qrCode.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="border:2px solid #ccc;padding:5px">`;
+            // Display static QR code image
+            qrCode.innerHTML = `<img src="images/qr-code.png" alt="VietQR - Nguyen Huu Hai" style="max-width:300px;border:2px solid #ccc;padding:5px">`;
             qrContainer.style.display = 'block';
         } else {
             qrContainer.style.display = 'none';
