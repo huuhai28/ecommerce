@@ -27,9 +27,9 @@
             </svg>
             <span id="cartCount">0</span>
           </button>
-          <button id="btnOrders" class="btn-text">Đơn hàng</button>
-          <button id="btnAdmin" class="btn-text">Admin</button>
           <div id="userArea"></div>
+          <button id="btnOrders" class="btn-action">Đơn hàng</button>
+          <button id="btnAdmin" class="btn-action">Admin</button>
         </div>
       </div>
     </header>
@@ -38,11 +38,14 @@
       <div class="hero-content">
         <h1>Super value deals</h1>
         <p>on selected items</p>
-        <button class="btn-primary">Shop now</button>
+        <button class="btn-primary" onclick="document.querySelector('.featured-section').scrollIntoView({behavior: 'smooth'})">Shop now</button>
       </div>
-      <div class="hero-image">
-        <img src="https://via.placeholder.com/400x500/4a9b8e/ffffff?text=Fashion" alt="Fashion Model">
-      </div>
+    </section>
+
+    <!-- Hidden filter controls to satisfy existing JS selectors (q, cat) -->
+    <section style="display:none">
+      <input id="q" />
+      <select id="cat"><option value="all">All</option></select>
     </section>
 
     <section class="featured-section">
@@ -74,11 +77,9 @@
   <div id="modals"></div>
 
   <script>
-    // Enable gateway mode BEFORE loading api.js
-    // Hardcode to worker node IP to avoid hostname mismatch
-    window.BACKEND_API_GATEWAY_IP = "192.168.1.112";
-    window.BACKEND_API_GATEWAY_PORT = 30004;
-  </script>
+  window.BACKEND_API_GATEWAY_IP = "192.168.1.111";  
+  window.BACKEND_API_GATEWAY_PORT = 30004;
+</script>
   <script src="js/api.js" defer></script>
   <script type="module" src="js/script.v2.js"></script>
 

@@ -182,58 +182,6 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
     }
 }
 
-// GET /api/orders/:id (Lấy chi tiết đơn hàng)
-app.get("/api/orders/:id", protect, async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const orderResult = await pool.query(
-            `SELECT id, order_tracking_number, total_price, total_quantity, 
-                    customer_id, billing_address_id, shipping_address_id, 
-                    status, date_created, last_updated
-             FROM orders WHERE id=$1`,
-            [id]
-        );
-
-        if (orderResult.rows.length === 0) {
-            return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
-        }
-
-        const order = orderResult.rows[0];
-
-        // Lấy order items
-        const itemsResult = await pool.query(
-            `SELECT id, product_id, quantity, unit_price, image_url 
-             FROM order_item WHERE order_id=$1`,
-            [id]
-        );
-
-        res.json({
-            id: order.id,
-            trackingNumber: order.order_tracking_number,
-            totalPrice: parseFloat(order.total_price),
-            totalQuantity: order.total_quantity,
-            customerId: order.customer_id,
-            billingAddressId: order.billing_address_id,
-            shippingAddressId: order.shipping_address_id,
-            status: order.status,
-            dateCreated: order.date_created,
-            lastUpdated: order.last_updated,
-            items: itemsResult.rows.map(item => ({
-                id: item.id,
-                productId: item.product_id,
-                quantity: item.quantity,
-                unitPrice: parseFloat(item.unit_price),
-                imageUrl: item.image_url
-            }))
-        });
-
-    } catch (err) {
-        console.error("Lỗi lấy đơn hàng:", err.message);
-        res.status(500).json({ message: "Lỗi server." });
-    }
-});
-
 // GET /api/orders/me (Lấy đơn hàng của customer đang đăng nhập)
 app.get("/api/orders/me", protect, async (req, res) => {
     try {
@@ -284,6 +232,59 @@ app.get("/api/orders/me", protect, async (req, res) => {
     } catch (err) {
         console.error("Lỗi lấy đơn hàng:", err.message);
         res.status(500).json({ message: "Lỗi server khi lấy đơn hàng." });
+    }
+});
+
+// GET /api/orders/:id (Lấy chi tiết đơn hàng)
+// Lưu ý: đặt sau /me để tránh bắt nhầm id="me"
+app.get("/api/orders/:id", protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const orderResult = await pool.query(
+            `SELECT id, order_tracking_number, total_price, total_quantity, 
+                    customer_id, billing_address_id, shipping_address_id, 
+                    status, date_created, last_updated
+             FROM orders WHERE id=$1`,
+            [id]
+        );
+
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
+        }
+
+        const order = orderResult.rows[0];
+
+        // Lấy order items
+        const itemsResult = await pool.query(
+            `SELECT id, product_id, quantity, unit_price, image_url 
+             FROM order_item WHERE order_id=$1`,
+            [id]
+        );
+
+        res.json({
+            id: order.id,
+            trackingNumber: order.order_tracking_number,
+            totalPrice: parseFloat(order.total_price),
+            totalQuantity: order.total_quantity,
+            customerId: order.customer_id,
+            billingAddressId: order.billing_address_id,
+            shippingAddressId: order.shipping_address_id,
+            status: order.status,
+            dateCreated: order.date_created,
+            lastUpdated: order.last_updated,
+            items: itemsResult.rows.map(item => ({
+                id: item.id,
+                productId: item.product_id,
+                quantity: item.quantity,
+                unitPrice: parseFloat(item.unit_price),
+                imageUrl: item.image_url
+            }))
+        });
+
+    } catch (err) {
+        console.error("Lỗi lấy đơn hàng:", err.message);
+        res.status(500).json({ message: "Lỗi server." });
     }
 });
 
