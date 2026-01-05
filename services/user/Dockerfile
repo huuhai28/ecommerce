@@ -7,7 +7,7 @@ COPY package*.json ./
 
 RUN npm install
 
-COPY . .
+COPY src/ ./src/
 
 # production
 FROM node:20-alpine 

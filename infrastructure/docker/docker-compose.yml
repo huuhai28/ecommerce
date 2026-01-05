@@ -13,7 +13,7 @@ services:
       POSTGRES_DB: user_db
     volumes:
       - user_db_data:/var/lib/postgresql/data
-      - ./db/init-user.sql:/docker-entrypoint-initdb.d/init-user.sql:ro
+      - ../../database/migrations/init-user.sql:/docker-entrypoint-initdb.d/init-user.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -30,7 +30,7 @@ services:
       POSTGRES_DB: catalogue_db
     volumes:
       - catalogue_db_data:/var/lib/postgresql/data
-      - ./db/init-catalogue.sql:/docker-entrypoint-initdb.d/init-catalogue.sql:ro
+      - ../../database/migrations/init-catalogue.sql:/docker-entrypoint-initdb.d/init-catalogue.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -47,7 +47,7 @@ services:
       POSTGRES_DB: order_db
     volumes:
       - order_db_data:/var/lib/postgresql/data
-      - ./db/init-order.sql:/docker-entrypoint-initdb.d/init-order.sql:ro
+      - ../../database/migrations/init-order.sql:/docker-entrypoint-initdb.d/init-order.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -64,7 +64,7 @@ services:
       POSTGRES_DB: payment_db
     volumes:
       - payment_db_data:/var/lib/postgresql/data
-      - ./db/init-payment.sql:/docker-entrypoint-initdb.d/init-payment.sql:ro
+      - ../../database/migrations/init-payment.sql:/docker-entrypoint-initdb.d/init-payment.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -81,7 +81,7 @@ services:
       POSTGRES_DB: shipping_db
     volumes:
       - shipping_db_data:/var/lib/postgresql/data
-      - ./db/init-shipping.sql:/docker-entrypoint-initdb.d/init-shipping.sql:ro
+      - ../../database/migrations/init-shipping.sql:/docker-entrypoint-initdb.d/init-shipping.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
