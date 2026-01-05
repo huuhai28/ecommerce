@@ -41,6 +41,6 @@ spec:
   ports:
   - port: 3010
     targetPort: 3010
-    nodePort: 30004 # Đây là cổng quan trọng để Frontend gọi vào IP 192.168.1.112:30004
+    nodePort: 30005 # Đổi nodePort để tránh trùng với api-gateway (30004)
   selector:
     app: backend-api
