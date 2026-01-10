@@ -17,7 +17,8 @@ spec:
         kubernetes.io/hostname: master-node
       containers:
       - name: frontend
-        image: huuhai123/frontend-service:latest 
+        image: huuhai123/ecommerce-frontend:latest
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "128Mi"
