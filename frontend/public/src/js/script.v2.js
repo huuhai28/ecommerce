@@ -1,12 +1,6 @@
   
-// frontend/js/script.v2.js
 
-/*****************************************************************
- * Mini E-commerce frontend - Microservices Version
- * Đã kết nối với api.js để dùng Gateway
- *****************************************************************/
-
-// ---------------- utilities ----------------
+ 
 const money = v => v.toLocaleString('vi-VN') + ' ₫';
 const formatDateTime = v => new Date(v).toLocaleString('vi-VN');
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -15,11 +9,12 @@ const LS = localStorage;
 const KEY_CART = 'demo_cart_v1';
 const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v1';
 const SAMPLE_PRODUCTS = [
-    {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun co dãn, thoáng mát.',img:'https://picsum.photos/seed/t1/800/600'},
-    {id:'p2',title:'Quần jean',price:499000,category:'Quần',desc:'Quần jean nam form ôm.',img:'https://picsum.photos/seed/t2/800/600'},
-    {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang.',img:'https://picsum.photos/seed/t3/800/600'},
-    {id:'p4',title:'Nón lưỡi trai',price:99000,category:'Phụ kiện',desc:'Nón chất liệu nhẹ.',img:'https://picsum.photos/seed/t4/800/600'},
-    {id:'p5',title:'Áo khoác',price:350000,category:'Áo',desc:'Áo khoác ấm cho mùa đông.',img:'https://picsum.photos/seed/t5/800/600'}
+    {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun cotton cao cấp, chất liệu co dãn, thoáng mát. Thiết kế đơn giản, phù hợp mọi phong cách.',img:'src/assets/áo thun.jpg'},
+    {id:'p2',title:'Quần jean nam',price:499000,category:'Quần',desc:'Quần jean nam form slim fit, chất liệu denim cao cấp, bền đẹp. Phù hợp đi làm và dạo phố.',img:'src/assets/quần jean.jpg'},
+    {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang, thiết kế hiện đại. Đế êm ái, phù hợp vận động cả ngày.',img:'src/assets/giày.jpg'},
+    {id:'p4',title:'Mũ lưỡi trai',price:99000,category:'Phụ kiện',desc:'Mũ lưỡi trai thời trang, chất liệu nhẹ, thoáng khí. Bảo vệ khỏi nắng hiệu quả.',img:'src/assets/mũ.jpg'},
+    {id:'p5',title:'Áo khoác hoodie',price:450000,category:'Áo',desc:'Áo hoodie ấm áp, phong cách trẻ trung. Chất liệu nỉ bông cao cấp, giữ nhiệt tốt.',img:'src/assets/hoodie.jpg'},
+    {id:'p6',title:'Áo khoác jacket',price:650000,category:'Áo',desc:'Áo khoác jacket thời trang, chống gió chống nước. Thiết kế nam tính, phù hợp mùa đông.',img:'src/assets/áo khoác.jpg'}
 ];
 function ensureSampleProductsSeeded(){
     if(!LS.getItem(KEY_FALLBACK_PRODUCTS)){
@@ -41,12 +36,12 @@ function useSampleProductsFallback(){
     showFlash('Đang dùng dữ liệu mẫu (offline)');
 }
 
-// ---------------- state ----------------
-let products = []; // Sẽ lấy từ API Catalogue
-let cart = loadCart(); // {productId: qty}
+ 
+let products = [];
+let cart = loadCart();
 let currentUser = null; 
 
-// ---------------- DOM refs ----------------
+ 
 const productGrid = document.getElementById('productGrid');
 const qInput = document.getElementById('q');
 const catSelect = document.getElementById('cat');
@@ -58,7 +53,7 @@ const userArea = document.getElementById('userArea');
 const modals = document.getElementById('modals');
 const ordersButton = document.getElementById('btnOrders');
 
-// ---------------- Helpers ----------------
+ 
 function getToken() { return LS.getItem('userToken'); }
 function loadCart() {
     const raw = LS.getItem(KEY_CART);
@@ -79,7 +74,7 @@ function checkTokenAndInitUser() {
     }
 }
 
-// ---------------- API Calls (Dùng API_ENDPOINTS từ api.js) ----------------
+ 
 
 async function fetchProducts() {
     try {
@@ -96,7 +91,7 @@ async function fetchProducts() {
     }
 }
 
-// ---------------- render helpers ----------------
+ 
 function renderCategories(){
     catSelect.innerHTML = '';
     const s = new Set(products.map(p=>p.category));
@@ -117,15 +112,13 @@ function renderProducts(){
     visible.forEach(p => {
         const el = document.createElement('div'); el.className='card';
         el.innerHTML = `
-            <img src="${p.img}" alt="">
-            <div class=title>${p.title}</div>
-            <div class=muted>${p.category}</div>
-            <div style='margin-top:8px' class='row'>
-                <div class='price'>${money(p.price)}</div>
-                <div style='margin-left:auto' class='row'>
-                    <button data-id='${p.id}' class='btnView'>Xem</button>
-                    <button data-id='${p.id}' class='btnAdd' style='background:var(--accent);color:#fff;padding:6px 8px;border-radius:6px;border:0'>Thêm</button>
-                </div>
+            <img src="${p.img}" alt="${p.title}" onerror="this.src='src/assets/tải xuống.jpg'">
+            <div class='title'>${p.title}</div>
+            <div class='muted'>${p.category}</div>
+            <div class='price'>${money(p.price)}</div>
+            <div class='row' style='margin-top:auto'>
+                <button data-id='${p.id}' class='btnView'>Xem chi tiết</button>
+                <button data-id='${p.id}' class='btnAdd' style='background:var(--accent);color:#fff;padding:8px 14px;border-radius:8px;border:0'>Thêm giỏ</button>
             </div>`;
         productGrid.appendChild(el);
     });
@@ -146,7 +139,7 @@ function renderCart(){
     let subtotal=0;
     items.forEach(it=>{
         const div = document.createElement('div'); div.className='cart-item';
-        div.innerHTML = `<img src='${it.product.img}'><div style='flex:1'><div>${it.product.title}</div><div class='muted'>${money(it.product.price)}</div></div><div style='text-align:right'><div><button data-id='${it.product.id}' class='dec'>-</button><span style='margin:0 8px'>${it.qty}</span><button data-id='${it.product.id}' class='inc'>+</button></div><div style='margin-top:6px'>${money(it.product.price * it.qty)}</div></div>`;
+        div.innerHTML = `<img src='${it.product.img}' onerror="this.src='src/assets/tải xuống.jpg'" alt='${it.product.title}'><div style='flex:1'><div style='font-weight:600'>${it.product.title}</div><div class='muted'>${money(it.product.price)}</div></div><div style='text-align:right'><div><button data-id='${it.product.id}' class='dec' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>-</button><span style='margin:0 12px;font-weight:600'>${it.qty}</span><button data-id='${it.product.id}' class='inc' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>+</button></div><div style='margin-top:8px;font-weight:700;color:var(--primary)'>${money(it.product.price * it.qty)}</div></div>`;
         cartItemsWrap.appendChild(div);
         subtotal += it.product.price * it.qty;
     });
@@ -168,7 +161,7 @@ function showFlash(msg){
     setTimeout(()=> f.remove(), 1500);
 }
 
-// ---------------- Modals ----------------
+ 
 function openModal(html){
     const wrap = document.createElement('div'); wrap.className='modal'; wrap.innerHTML = `<div class='box'>${html}</div>`; modals.appendChild(wrap);
     wrap.onclick = (e)=>{ if(e.target===wrap) wrap.remove(); };
@@ -177,15 +170,16 @@ function openModal(html){
 
 function openProductModal(p){
     const html = `
-        <div style='display:flex;gap:12px'>
-            <div style='flex:1'><img src='${p.img}' style='width:100%;height:320px;object-fit:cover;border-radius:8px'></div>
-            <div style='width:320px'>
-                <h3>${p.title}</h3><div class='muted'>${p.category}</div>
-                <div style='margin:10px 0' class='price'>${money(p.price)}</div>
-                <p class='muted'>${p.desc||''}</p>
-                <div style='margin-top:14px' class='row'>
-                    <button id='addFromModal' style='background:var(--accent);color:#fff;padding:8px;border-radius:8px;border:0'>Thêm vào giỏ</button>
-                    <button id='closeModal' style='padding:8px;border-radius:8px;border:1px solid #ddd'>Đóng</button>
+        <div style='display:flex;gap:20px;flex-direction:column;max-height:80vh;overflow:auto'>
+            <div style='width:100%'><img src='${p.img}' onerror="this.src='src/assets/tải xuống.jpg'" style='width:100%;height:400px;object-fit:cover;border-radius:12px'></div>
+            <div style='width:100%'>
+                <h3 style='margin-top:0;font-size:24px'>${p.title}</h3>
+                <div class='muted' style='font-size:14px;margin-bottom:12px'>${p.category}</div>
+                <div style='margin:16px 0' class='price' style='font-size:28px'>${money(p.price)}</div>
+                <p class='muted' style='line-height:1.6;font-size:14px'>${p.desc||'Sản phẩm chất lượng cao, được nhiều khách hàng tin dùng.'}</p>
+                <div style='margin-top:24px;display:flex;gap:12px'>
+                    <button id='addFromModal' style='flex:1;background:var(--accent);color:#fff;padding:12px;border-radius:8px;border:0;font-weight:600;cursor:pointer'>Thêm vào giỏ hàng</button>
+                    <button id='closeModal' style='padding:12px 20px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer'>Đóng</button>
                 </div>
             </div>
         </div>`;
@@ -194,7 +188,7 @@ function openProductModal(p){
     wrap.querySelector('#closeModal').onclick = ()=>wrap.remove();
 }
 
-// ---------------- Auth ----------------
+ 
 function renderUserArea(){
     userArea.innerHTML='';
     if(currentUser && getToken()){
@@ -234,7 +228,7 @@ function openLoginModal(){
             return;
         }
 
-        // Split name into first and last name
+        
         const nameParts = name.trim().split(/\s+/);
         const firstName = nameParts[0];
         const lastName = nameParts.slice(1).join(' ') || firstName;
@@ -295,7 +289,7 @@ function openLoginModal(){
     };
 }
 
-// ---------------- Checkout ----------------
+ 
 const checkoutBtn = document.getElementById('btnCheckout');
 if (checkoutBtn) {
     checkoutBtn.onclick = () => {
@@ -325,14 +319,13 @@ function openCheckoutModal(){
         <button id='payNow' style='margin-top:10px;width:100%;background:var(--accent);color:#fff;padding:8px'>Xác nhận đặt hàng</button>`;
     const wrap = openModal(html);
     
-    // QR code display for VietQR (Nguyen Huu Hai - 79986281112003)
+    
     const paymentMethodSelect = wrap.querySelector('#ch_payment_method');
     const qrContainer = wrap.querySelector('#qrCodeContainer');
     const qrCode = wrap.querySelector('#qrCode');
     
     paymentMethodSelect.onchange = () => {
         if (paymentMethodSelect.value === 'BANK_TRANSFER') {
-            // Display static QR code image
             qrCode.innerHTML = `<img src="images/qr-code.png" alt="VietQR - Nguyen Huu Hai" style="max-width:300px;border:2px solid #ccc;padding:5px">`;
             qrContainer.style.display = 'block';
         } else {
@@ -364,8 +357,7 @@ function openCheckoutModal(){
             return;
         }
         
-        // Backend address schema chỉ cần street, city, state, country, zipCode
-        // Name và phone lưu trong street để không mất thông tin
+        
         const fullAddress = `${name} - ${phone} - ${street}`;
         
         const shippingAddress = {
@@ -377,7 +369,7 @@ function openCheckoutModal(){
         };
 
         try {
-            // 1. Xử lý thanh toán (mock - không cần verify)
+            
             console.log('Processing payment with method:', paymentMethod);
             const paymentRes = await fetch(window.API_ENDPOINTS.PAYMENT.PROCESS, {
                 method: 'POST',
@@ -401,7 +393,7 @@ function openCheckoutModal(){
             const paymentData = await paymentRes.json();
             console.log('Payment processed:', paymentData);
             
-            // 2. Tạo đơn hàng
+            
             const res = await fetch(window.API_ENDPOINTS.ORDERS.CREATE, {
                 method: 'POST',
                 headers: {
@@ -489,12 +481,12 @@ async function handleOrdersClick(){
     }
 }
 
-// ---------------- Init ----------------
+ 
 function init(){
     checkTokenAndInitUser();
     renderUserArea();
     ensureSampleProductsSeeded();
-    fetchProducts(); // Lấy sản phẩm thực tế từ DB
+    fetchProducts();
     
     qInput.oninput = renderProducts;
     catSelect.onchange = renderProducts;

@@ -1,10 +1,4 @@
-// frontend/js/api.js
-
-/**
- * CẤU HÌNH TỰ ĐỘNG CHO MÔI TRƯỜNG
- * - Nếu bạn đang chạy Gateway (K8s) thì đặt window.BACKEND_API_GATEWAY_IP hoặc window.API_CONFIG.gatewayHost.
- * - Nếu không, mặc định front-end sẽ gọi trực tiếp các service trong Docker Compose qua host hiện tại.
- */
+ 
 const API_CONFIG = window.API_CONFIG || {};
 const protocol = (API_CONFIG.protocol || window.location.protocol || 'http:').includes('https') ? 'https' : 'http';
 const defaultHost = API_CONFIG.defaultHost || window.location.hostname || 'localhost';
@@ -18,7 +12,7 @@ function buildBase(host, port, path = '/api') {
 
 const gatewayHost = window.BACKEND_API_GATEWAY_IP || API_CONFIG.gatewayHost || '192.168.1.111';
 const gatewayPort = API_CONFIG.gatewayPort || window.BACKEND_API_GATEWAY_PORT || 30004;
-const useGateway = API_CONFIG.useGateway ?? true;  // Always use gateway
+const useGateway = API_CONFIG.useGateway ?? true;
 
 let API_ENDPOINTS = {};
 let activeMode = '';
