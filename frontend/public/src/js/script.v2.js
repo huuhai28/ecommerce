@@ -9,12 +9,12 @@ const LS = localStorage;
 const KEY_CART = 'demo_cart_v1';
 const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v1';
 const SAMPLE_PRODUCTS = [
-    {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun cotton cao cấp, chất liệu co dãn, thoáng mát. Thiết kế đơn giản, phù hợp mọi phong cách.',img:'src/assets/áo thun.jpg'},
-    {id:'p2',title:'Quần jean nam',price:499000,category:'Quần',desc:'Quần jean nam form slim fit, chất liệu denim cao cấp, bền đẹp. Phù hợp đi làm và dạo phố.',img:'src/assets/quần jean.jpg'},
-    {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang, thiết kế hiện đại. Đế êm ái, phù hợp vận động cả ngày.',img:'src/assets/giày.jpg'},
-    {id:'p4',title:'Mũ lưỡi trai',price:99000,category:'Phụ kiện',desc:'Mũ lưỡi trai thời trang, chất liệu nhẹ, thoáng khí. Bảo vệ khỏi nắng hiệu quả.',img:'src/assets/mũ.jpg'},
-    {id:'p5',title:'Áo khoác hoodie',price:450000,category:'Áo',desc:'Áo hoodie ấm áp, phong cách trẻ trung. Chất liệu nỉ bông cao cấp, giữ nhiệt tốt.',img:'src/assets/hoodie.jpg'},
-    {id:'p6',title:'Áo khoác jacket',price:650000,category:'Áo',desc:'Áo khoác jacket thời trang, chống gió chống nước. Thiết kế nam tính, phù hợp mùa đông.',img:'src/assets/áo khoác.jpg'}
+    {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun cotton cao cấp, chất liệu co dãn, thoáng mát. Thiết kế đơn giản, phù hợp mọi phong cách.',img:'/src/assets/áo thun.jpg'},
+    {id:'p2',title:'Quần jean nam',price:499000,category:'Quần',desc:'Quần jean nam form slim fit, chất liệu denim cao cấp, bền đẹp. Phù hợp đi làm và dạo phố.',img:'/src/assets/quần jean.jpg'},
+    {id:'p3',title:'Giày sneaker',price:899000,category:'Giày',desc:'Giày sneaker thời trang, thiết kế hiện đại. Đế êm ái, phù hợp vận động cả ngày.',img:'/src/assets/giày.jpg'},
+    {id:'p4',title:'Mũ lưỡi trai',price:99000,category:'Phụ kiện',desc:'Mũ lưỡi trai thời trang, chất liệu nhẹ, thoáng khí. Bảo vệ khỏi nắng hiệu quả.',img:'/src/assets/mũ.jpg'},
+    {id:'p5',title:'Áo khoác hoodie',price:450000,category:'Áo',desc:'Áo hoodie ấm áp, phong cách trẻ trung. Chất liệu nỉ bông cao cấp, giữ nhiệt tốt.',img:'/src/assets/hoodie.jpg'},
+    {id:'p6',title:'Áo khoác jacket',price:650000,category:'Áo',desc:'Áo khoác jacket thời trang, chống gió chống nước. Thiết kế nam tính, phù hợp mùa đông.',img:'/src/assets/áo khoác.jpg'}
 ];
 function ensureSampleProductsSeeded(){
     if(!LS.getItem(KEY_FALLBACK_PRODUCTS)){
@@ -112,7 +112,7 @@ function renderProducts(){
     visible.forEach(p => {
         const el = document.createElement('div'); el.className='card';
         el.innerHTML = `
-            <img src="${p.img}" alt="${p.title}" onerror="this.src='src/assets/tải xuống.jpg'">
+            <img src="${p.img}" alt="${p.title}" onerror="this.src='/src/assets/tải xuống.jpg'">
             <div class='title'>${p.title}</div>
             <div class='muted'>${p.category}</div>
             <div class='price'>${money(p.price)}</div>
@@ -139,7 +139,7 @@ function renderCart(){
     let subtotal=0;
     items.forEach(it=>{
         const div = document.createElement('div'); div.className='cart-item';
-        div.innerHTML = `<img src='${it.product.img}' onerror="this.src='src/assets/tải xuống.jpg'" alt='${it.product.title}'><div style='flex:1'><div style='font-weight:600'>${it.product.title}</div><div class='muted'>${money(it.product.price)}</div></div><div style='text-align:right'><div><button data-id='${it.product.id}' class='dec' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>-</button><span style='margin:0 12px;font-weight:600'>${it.qty}</span><button data-id='${it.product.id}' class='inc' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>+</button></div><div style='margin-top:8px;font-weight:700;color:var(--primary)'>${money(it.product.price * it.qty)}</div></div>`;
+        div.innerHTML = `<img src='${it.product.img}' onerror="this.src='/src/assets/tải xuống.jpg'" alt='${it.product.title}'><div style='flex:1'><div style='font-weight:600'>${it.product.title}</div><div class='muted'>${money(it.product.price)}</div></div><div style='text-align:right'><div><button data-id='${it.product.id}' class='dec' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>-</button><span style='margin:0 12px;font-weight:600'>${it.qty}</span><button data-id='${it.product.id}' class='inc' style='padding:4px 10px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer'>+</button></div><div style='margin-top:8px;font-weight:700;color:var(--primary)'>${money(it.product.price * it.qty)}</div></div>`;
         cartItemsWrap.appendChild(div);
         subtotal += it.product.price * it.qty;
     });
@@ -171,7 +171,7 @@ function openModal(html){
 function openProductModal(p){
     const html = `
         <div style='display:flex;gap:20px;flex-direction:column;max-height:80vh;overflow:auto'>
-            <div style='width:100%'><img src='${p.img}' onerror="this.src='src/assets/tải xuống.jpg'" style='width:100%;height:400px;object-fit:cover;border-radius:12px'></div>
+            <div style='width:100%'><img src='${p.img}' onerror="this.src='/src/assets/tải xuống.jpg'" style='width:100%;height:400px;object-fit:cover;border-radius:12px'></div>
             <div style='width:100%'>
                 <h3 style='margin-top:0;font-size:24px'>${p.title}</h3>
                 <div class='muted' style='font-size:14px;margin-bottom:12px'>${p.category}</div>
