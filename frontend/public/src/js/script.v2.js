@@ -7,7 +7,10 @@ const uid = () => Math.random().toString(36).slice(2,9);
 
 const LS = localStorage;
 const KEY_CART = 'demo_cart_v1';
-const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v1';
+const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v3';
+// Force clear old cache
+if (LS.getItem('demo_products_seed_v1')) LS.removeItem('demo_products_seed_v1');
+if (LS.getItem('demo_products_seed_v2')) LS.removeItem('demo_products_seed_v2');
 const SAMPLE_PRODUCTS = [
     {id:'p1',title:'Áo thun cotton',price:199000,category:'Áo',desc:'Áo thun cotton cao cấp, chất liệu co dãn, thoáng mát. Thiết kế đơn giản, phù hợp mọi phong cách.',img:'/src/assets/áo thun.jpg'},
     {id:'p2',title:'Quần jean nam',price:499000,category:'Quần',desc:'Quần jean nam form slim fit, chất liệu denim cao cấp, bền đẹp. Phù hợp đi làm và dạo phố.',img:'/src/assets/quần jean.jpg'},
@@ -77,6 +80,10 @@ function checkTokenAndInitUser() {
  
 
 async function fetchProducts() {
+    // Force use local products with real images
+    useSampleProductsFallback();
+    return;
+    
     try {
         const response = await fetch(window.API_ENDPOINTS.PRODUCTS.LIST);
         if (response.ok) {

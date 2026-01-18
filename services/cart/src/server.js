@@ -10,6 +10,11 @@ app.use(express.json());
 // In-memory store: { userId: { key: value } }
 const store = {};
 
+app.get('/health', (_req, res) => {
+  const users = Object.keys(store).length;
+  res.json({ status: 'ok', users });
+});
+
 app.get('/api/cart/:user', (req, res) => {
   const u = req.params.user;
   res.json(store[u] || {});
@@ -27,4 +32,8 @@ app.delete('/api/cart/:user', (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => console.log(`Cart Service running on ${PORT}`));
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`Cart Service running on ${PORT}`));
+}
+
+module.exports = app;

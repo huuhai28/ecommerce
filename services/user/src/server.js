@@ -24,6 +24,16 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
+// Health check with a light DB probe
+app.get('/health', async (_req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ status: 'ok' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: err.message });
+    }
+});
+
 // ---------------- Middleware Bảo vệ (JWT) - Dùng cho các service khác nếu cần ----------------
 function protect(req, res, next) {
     const auth = req.headers.authorization;
@@ -162,13 +172,17 @@ app.get("/api/customers/:id", protect, async (req, res) => {
 
 /* ===================== RUN SERVER ===================== */
 
-pool.connect()
-    .then(() => console.log(`✅ User Service connected to DB`))
-    .catch(err => {
-        console.error("❌ User Service DB ERROR:", err.message);
-        process.exit(1); 
-    });
+if (process.env.NODE_ENV !== 'test') {
+    pool.connect()
+        .then(() => console.log(`✅ User Service connected to DB`))
+        .catch(err => {
+            console.error("❌ User Service DB ERROR:", err.message);
+            process.exit(1); 
+        });
 
-app.listen(PORT, () =>
-    console.log(`🚀 User Service running at http://localhost:${PORT}`)
-);
+    app.listen(PORT, () =>
+        console.log(`🚀 User Service running at http://localhost:${PORT}`)
+    );
+}
+
+module.exports = app;

@@ -45,6 +45,16 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
+// Lightweight health check
+app.get('/health', async (_req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ status: 'ok', rabbit: Boolean(amqpChannel) });
+    } catch (err) {
+        res.status(500).json({ status: 'error', rabbit: Boolean(amqpChannel), error: err.message });
+    }
+});
+
 // ---------------- Middleware Bảo vệ (JWT) ----------------
 function protect(req, res, next) {
     const auth = req.headers.authorization;
@@ -291,16 +301,20 @@ app.get("/api/orders/:id", protect, async (req, res) => {
 
 /* ===================== RUN SERVER ===================== */
 
-pool.connect()
-    .then(() => console.log(`✅ Order Service connected to DB`))
-    .catch(err => {
-        console.error("❌ Order Service DB ERROR:", err.message);
-        process.exit(1); 
-    });
+if (process.env.NODE_ENV !== 'test') {
+    pool.connect()
+        .then(() => console.log(`✅ Order Service connected to DB`))
+        .catch(err => {
+            console.error("❌ Order Service DB ERROR:", err.message);
+            process.exit(1); 
+        });
 
-// Initialize RabbitMQ connection (best-effort)
-initRabbit().catch(() => {});
+    // Initialize RabbitMQ connection (best-effort)
+    initRabbit().catch(() => {});
 
-app.listen(PORT, () =>
-    console.log(`🚀 Order Service running at http://localhost:${PORT}`)
-);
+    app.listen(PORT, () =>
+        console.log(`🚀 Order Service running at http://localhost:${PORT}`)
+    );
+}
+
+module.exports = app;

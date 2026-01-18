@@ -20,6 +20,16 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
+// Health check with DB ping
+app.get('/health', async (_req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ status: 'ok' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', error: err.message });
+    }
+});
+
 /* ===================== PRODUCTS ROUTES ===================== */
 
 // GET /api/products (Lấy tất cả sản phẩm)
@@ -129,13 +139,17 @@ app.get("/api/categories", async (req, res) => {
 
 /* ===================== RUN SERVER ===================== */
 
-pool.connect()
-    .then(() => console.log(`✅ Catalogue Service connected to DB`))
-    .catch(err => {
-        console.error("❌ Catalogue Service DB ERROR:", err.message);
-        process.exit(1); 
-    });
+if (process.env.NODE_ENV !== 'test') {
+    pool.connect()
+        .then(() => console.log(`✅ Catalogue Service connected to DB`))
+        .catch(err => {
+            console.error("❌ Catalogue Service DB ERROR:", err.message);
+            process.exit(1); 
+        });
 
-app.listen(PORT, () =>
-    console.log(`🚀 Catalogue Service running at http://localhost:${PORT}`)
-);
+    app.listen(PORT, () =>
+        console.log(`🚀 Catalogue Service running at http://localhost:${PORT}`)
+    );
+}
+
+module.exports = app;

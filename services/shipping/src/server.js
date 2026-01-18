@@ -1,9 +1,11 @@
 require('dotenv').config();
+const http = require('http');
 const amqp = require('amqplib');
 const { Pool } = require('pg');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672/';
 const QUEUE = process.env.RABBITMQ_QUEUE || 'shipping.requests';
+const PORT = process.env.PORT || 3005;
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -56,4 +58,20 @@ async function start(){
   }, { noAck: false });
 }
 
-start().catch(err => { console.error('Shipping service error', err); process.exit(1); });
+// Lightweight HTTP health endpoint for Kubernetes and debugging
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => console.log(`Shipping Service health server on ${PORT}`));
+  start().catch(err => { console.error('Shipping service error', err); process.exit(1); });
+}
+
+module.exports = { start, server };

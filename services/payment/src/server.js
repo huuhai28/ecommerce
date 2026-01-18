@@ -17,6 +17,16 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+// Health check with DB ping
+app.get('/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
 // Simple payments API (mock)
 app.post('/api/payments', async (req, res) => {
   const { amount, method } = req.body;
@@ -42,4 +52,8 @@ app.post('/api/payments', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Payment Service running on ${PORT}`));
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`Payment Service running on ${PORT}`));
+}
+
+module.exports = app;
