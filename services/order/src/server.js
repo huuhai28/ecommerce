@@ -3,11 +3,10 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
-const jwt = require('jsonwebtoken'); // Cần JWT để xác thực token
+const jwt = require('jsonwebtoken');
 const amqp = require('amqplib');
 
 const app = express();
-// Lấy cổng từ biến môi trường (Docker Compose sẽ truyền vào 3003)
 const PORT = process.env.PORT || 3003; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672/';
@@ -15,7 +14,6 @@ const SHIPPING_QUEUE = process.env.RABBITMQ_QUEUE || 'shipping.requests';
 
 let amqpChannel = null;
 async function initRabbit() {
-    // try to connect in a loop until RabbitMQ becomes available
     while (!amqpChannel) {
         try {
             const conn = await amqp.connect(RABBITMQ_URL);
@@ -32,20 +30,16 @@ async function initRabbit() {
     }
 }
 
-// ---------------- Middleware ----------------
-// CORS handled by API Gateway
 app.use(express.json());
 
-// ---------------- Kết nối PostgreSQL ----------------
 const pool = new Pool({
     user: process.env.DB_USER,
-    host: process.env.DB_HOST, // SẼ LÀ 'postgres_db' trong Docker Compose
+    host: process.env.DB_HOST, 
     database: process.env.DB_DATABASE,
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
 });
 
-// Lightweight health check
 app.get('/health', async (_req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -55,7 +49,6 @@ app.get('/health', async (_req, res) => {
     }
 });
 
-// ---------------- Middleware Bảo vệ (JWT) ----------------
 function protect(req, res, next) {
     const auth = req.headers.authorization;
     if (!auth || !auth.startsWith("Bearer ")) {
@@ -78,9 +71,6 @@ function generateTrackingNumber() {
     return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
-/* ===================== ORDERS ROUTES ===================== */
-
-// POST /api/orders (Tạo đơn hàng mới)
 app.post("/api/orders", protect, async (req, res) => {
     let { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
     const customerId = req.customerId;
@@ -92,7 +82,6 @@ app.post("/api/orders", protect, async (req, res) => {
         return res.status(400).json({ message: "Giỏ hàng trống." });
     }
     
-    // Tính lại totalPrice từ items (không tin client)
     const SHIPPING_FEE = 30000;
     const calculatedTotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) + SHIPPING_FEE;
     totalPrice = calculatedTotal;

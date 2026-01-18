@@ -5,3 +5,5 @@ deploy.ps1
 quick-update-frontend.ps1
 README-DEPLOY.md
 exercises/
+API_DOCUMENTATION.md
+DEPLOYMENT_GUIDE.md

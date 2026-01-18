@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       POSTGRES_DB: user_db
     volumes:
       - user_db_data:/var/lib/postgresql/data
@@ -24,7 +24,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       POSTGRES_DB: catalogue_db
     volumes:
       - catalogue_db_data:/var/lib/postgresql/data
@@ -41,7 +41,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       POSTGRES_DB: order_db
     volumes:
       - order_db_data:/var/lib/postgresql/data
@@ -58,7 +58,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       POSTGRES_DB: payment_db
     volumes:
       - payment_db_data:/var/lib/postgresql/data
@@ -75,11 +75,27 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       POSTGRES_DB: shipping_db
     volumes:
       - shipping_db_data:/var/lib/postgresql/data
       - ../../database/migrations/init-shipping.sql:/docker-entrypoint-initdb.d/init-shipping.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cart_db:
+    image: postgres:14-alpine
+    container_name: cart_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
+      POSTGRES_DB: cart_db
+    volumes:
+      - cart_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
@@ -98,9 +114,9 @@ services:
       PORT: 3004
       DB_HOST: user_db
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: 123456
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       DB_DATABASE: user_db
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET not set}
     ports:
       - "3004:3004"
     depends_on:
@@ -117,9 +133,9 @@ services:
       PORT: 3002
       DB_HOST: catalogue_db
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: 123456
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       DB_DATABASE: catalogue_db
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET not set}
     ports:
       - "3002:3002"
     depends_on:
@@ -136,10 +152,10 @@ services:
       PORT: 3003
       DB_HOST: order_db
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: 123456
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       DB_DATABASE: order_db
-      JWT_SECRET: ${JWT_SECRET}
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET not set}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
       PAYMENT_URL: http://payment_service:3005/api
     ports:
       - "3003:3003"
@@ -148,7 +164,6 @@ services:
         condition: service_healthy
       payment_service:
         condition: service_started
-    # Publish order-created events to RabbitMQ; shipping service consumes them
     
   frontend:
     build:
@@ -184,8 +199,8 @@ services:
     container_name: ecommerce_rabbitmq
     restart: always
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -205,7 +220,7 @@ services:
       PORT: 3005
       DB_HOST: payment_db
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: 123456
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       DB_DATABASE: payment_db
     ports:
       - "3005:3005"
@@ -221,8 +236,16 @@ services:
     restart: always
     environment:
       PORT: 3006
+      DB_HOST: cart_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
+      DB_DATABASE: cart_db
+      DB_PORT: 5432
     ports:
       - "3006:3006"
+    depends_on:
+      cart_db:
+        condition: service_healthy
 
   shipping_service:
     build:
@@ -232,11 +255,12 @@ services:
     restart: always
     environment:
       PORT: 3007
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
       DB_HOST: shipping_db
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: 123456
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       DB_DATABASE: shipping_db
+      DB_PORT: 5432
     ports:
       - "3007:3007"
     depends_on:
@@ -249,4 +273,5 @@ volumes:
   order_db_data:
   payment_db_data:
   shipping_db_data:
+  cart_db_data:
 
