@@ -3,14 +3,13 @@ pipeline {
     parameters {
         choice(name: 'SERVICE', 
                choices: ['all', 'frontend', 'backend', 'gateway', 'cart', 'catalogue', 'order', 'payment', 'shipping', 'user'], 
-               description: 'Chọn "all" để build tất cả hoặc chọn lẻ')
+               )
     }
     environment {
         DOCKER_HUB_USER = 'huuhai123'
         LIST_SERVICES = 'frontend backend gateway cart catalogue order payment shipping user'
     }
     stages {
-        // ĐÃ XÓA STAGE CHECKOUT CODE VÌ SCM TỰ LÀM RỒI
         stage('Build & Deploy Parallel') {
             steps {
                 script {
@@ -22,11 +21,8 @@ pipeline {
                             stage("Processing ${svc}") {
                                 try {
                                     echo "--- BẮT ĐẦU: ${svc} ---"
-                                    // Xác định thư mục dựa trên cấu trúc folder của bạn
                                     def buildFolder = (svc == 'frontend' || svc == 'backend' || svc == 'gateway') ? svc : "services/${svc}"
                                     def imageName = "ecommerce-${svc}"
-                                    
-                                    // Map tên deployment thực tế trên máy master của bạn
                                     def k8sName = (svc == 'frontend') ? "frontend-service" : 
                                                   (svc == 'backend') ? "backend-api" : 
                                                   (svc == 'gateway') ? "api-gateway" : "${svc}-service"
