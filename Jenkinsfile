@@ -19,7 +19,7 @@ pipeline {
                     targetServices.each {
                         svc -> jobs[svc] = {
                             stage("Processing ${svc}"){
-                                def folderPath = (svc == 'frontend' || svc == 'gateway') ? svc : .service/${svc}
+                                def folderPath = (svc == 'frontend' || svc == 'gateway') ? svc : "services/${svc}"          
                                 def isChanged = currentBuild.changeSets.any {
                                     cs -> cs.items.any { item -> item.affectedPaths.any { path -> path.startsWith(folderPath)}}
                                 }
