@@ -1,9 +1,7 @@
--- Init script for ORDER service database
--- Creates order, order_item and related tables
+
 
 BEGIN;
 
--- ==================== ADDRESS (needed for order references) ====================
 
 CREATE TABLE IF NOT EXISTS address (
   id SERIAL PRIMARY KEY,
@@ -14,7 +12,6 @@ CREATE TABLE IF NOT EXISTS address (
   zip_code VARCHAR(255)
 );
 
--- ==================== ORDER & ORDER ITEMS ====================
 
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
@@ -22,7 +19,7 @@ CREATE TABLE IF NOT EXISTS orders (
   total_price DECIMAL(19,2),
   total_quantity INTEGER,
   billing_address_id BIGINT REFERENCES address(id),
-  customer_id BIGINT, -- Reference to customer in user_db (no FK since different DB)
+  customer_id BIGINT, 
   shipping_address_id BIGINT REFERENCES address(id),
   status VARCHAR(128) DEFAULT 'PENDING',
   date_created TIMESTAMP DEFAULT NOW(),
