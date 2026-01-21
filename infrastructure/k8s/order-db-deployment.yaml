@@ -1,3 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-db-init
+  namespace: ecommerce
+data:
+  init-order.sql: |
+    
+    
+    BEGIN;
+    
+    
+    CREATE TABLE IF NOT EXISTS address (
+      id SERIAL PRIMARY KEY,
+      street VARCHAR(255),
+      city VARCHAR(255),
+      state VARCHAR(255),
+      country VARCHAR(255),
+      zip_code VARCHAR(255)
+    );
+    
+    
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      order_tracking_number VARCHAR(255) UNIQUE,
+      total_price DECIMAL(19,2),
+      total_quantity INTEGER,
+      billing_address_id BIGINT REFERENCES address(id),
+      customer_id BIGINT, 
+      shipping_address_id BIGINT REFERENCES address(id),
+      status VARCHAR(128) DEFAULT 'PENDING',
+      date_created TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS order_item (
+      id SERIAL PRIMARY KEY,
+      image_url VARCHAR(255),
+      quantity INTEGER,
+      unit_price DECIMAL(19,2),
+      order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+      product_id BIGINT -- Reference to product in catalogue_db (no FK since different DB)
+    );
+    
+    COMMIT;
+  init-order.sh: |
+    #!/bin/sh
+    set -e
+    echo "Creating order_db database if missing..."
+    psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE order_db;" || true
+    echo "Applying order schema..."
+    psql -U "$POSTGRES_USER" -d order_db -f /docker-entrypoint-initdb.d/init-order.sql
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,10 +98,15 @@ spec:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
           subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
       volumes:
       - name: pgdata
         persistentVolumeClaim:
           claimName: order-db-pvc
+      - name: init-script
+        configMap:
+          name: order-db-init
 ---
 apiVersion: v1
 kind: Service

@@ -1,3 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-db-init
+  namespace: ecommerce
+data:
+  init-user.sql: |
+    -- Init script for USER service database
+    -- Creates customer and address tables
+    
+    BEGIN;
+    
+    -- ==================== CUSTOMER & ADDRESS ====================
+    
+    CREATE TABLE IF NOT EXISTS customer (
+      id SERIAL PRIMARY KEY,
+      first_name VARCHAR(255) NOT NULL,
+      last_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT,
+      date_created TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS address (
+      id SERIAL PRIMARY KEY,
+      street VARCHAR(255),
+      city VARCHAR(255),
+      state VARCHAR(255),
+      country VARCHAR(255),
+      zip_code VARCHAR(255)
+    );
+    
+    COMMIT;
+  init-user.sh: |
+    #!/bin/sh
+    set -e
+    echo "Creating user_db database if missing..."
+    psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE user_db;" || true
+    echo "Applying user schema..."
+    psql -U "$POSTGRES_USER" -d user_db -f /docker-entrypoint-initdb.d/init-user.sql
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,10 +87,15 @@ spec:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
           subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
       volumes:
       - name: pgdata
         persistentVolumeClaim:
           claimName: user-db-pvc
+      - name: init-script
+        configMap:
+          name: user-db-init
 ---
 apiVersion: v1
 kind: Service

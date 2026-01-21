@@ -1,0 +1,119 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-user-db
+  namespace: ecommerce
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: psql
+        image: postgres:14-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Creating user_db...";
+          psql -h user-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE user_db;' || true;
+          echo "Applying user schema...";
+          cat <<'SQL' > /tmp/init-user.sql
+          -- Init USER schema
+          BEGIN;
+          CREATE TABLE IF NOT EXISTS customer (
+            id SERIAL PRIMARY KEY,
+            first_name VARCHAR(255) NOT NULL,
+            last_name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash TEXT,
+            date_created TIMESTAMP DEFAULT NOW(),
+            last_updated TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS address (
+            id SERIAL PRIMARY KEY,
+            street VARCHAR(255),
+            city VARCHAR(255),
+            state VARCHAR(255),
+            country VARCHAR(255),
+            zip_code VARCHAR(255)
+          );
+          COMMIT;
+          SQL
+          psql -h user-db -U "$POSTGRES_USER" -d user_db -f /tmp/init-user.sql;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-order-db
+  namespace: ecommerce
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: psql
+        image: postgres:14-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Creating order_db...";
+          psql -h order-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE order_db;' || true;
+          echo "Applying order schema...";
+          cat <<'SQL' > /tmp/init-order.sql
+          BEGIN;
+          CREATE TABLE IF NOT EXISTS address (
+            id SERIAL PRIMARY KEY,
+            street VARCHAR(255),
+            city VARCHAR(255),
+            state VARCHAR(255),
+            country VARCHAR(255),
+            zip_code VARCHAR(255)
+          );
+          CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            order_tracking_number VARCHAR(255) UNIQUE,
+            total_price DECIMAL(19,2),
+            total_quantity INTEGER,
+            billing_address_id BIGINT REFERENCES address(id),
+            customer_id BIGINT,
+            shipping_address_id BIGINT REFERENCES address(id),
+            status VARCHAR(128) DEFAULT 'PENDING',
+            date_created TIMESTAMP DEFAULT NOW(),
+            last_updated TIMESTAMP DEFAULT NOW()
+          );
+          CREATE TABLE IF NOT EXISTS order_item (
+            id SERIAL PRIMARY KEY,
+            image_url VARCHAR(255),
+            quantity INTEGER,
+            unit_price DECIMAL(19,2),
+            order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+            product_id BIGINT
+          );
+          COMMIT;
+          SQL
+          psql -h order-db -U "$POSTGRES_USER" -d order_db -f /tmp/init-order.sql;
