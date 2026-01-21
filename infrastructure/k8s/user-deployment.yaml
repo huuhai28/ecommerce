@@ -45,6 +45,8 @@ spec:
               key: DB_PASSWORD
         - name: DB_DATABASE
           value: "user_db"
+        - name: DB_PORT
+          value: "5432"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:

@@ -45,6 +45,8 @@ spec:
               key: DB_PASSWORD
         - name: DB_DATABASE
           value: "catalogue_db"
+        - name: DB_PORT
+          value: "5432"
         ports:
         - containerPort: 3002
 ---
