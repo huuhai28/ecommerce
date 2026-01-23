@@ -20,10 +20,10 @@ async function initRabbit() {
             const ch = await conn.createChannel();
             await ch.assertQueue(SHIPPING_QUEUE, { durable: true });
             amqpChannel = ch;
-            console.log('✅ Order Service connected to RabbitMQ');
+            console.log(' Order Service connected to RabbitMQ');
             break;
         } catch (err) {
-            console.warn('⚠️ Could not connect to RabbitMQ, retrying in 3s:', err.message);
+            console.warn(' Could not connect to RabbitMQ, retrying in 3s:', err.message);
             amqpChannel = null;
             await new Promise(r => setTimeout(r, 3000));
         }
@@ -72,10 +72,10 @@ function generateTrackingNumber() {
 }
 
 app.post("/api/orders", protect, async (req, res) => {
-    let { items, totalPrice, totalQuantity, billingAddress, shippingAddress } = req.body;
+    let { items, totalPrice, totalQuantity, billingAddress, shippingAddress, paymentId, paymentMethod } = req.body;
     const customerId = req.customerId;
 
-    console.log('📦 Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId });
+    console.log('📦 Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId, paymentMethod });
 
     if (!items || items.length === 0) {
         console.log('❌ Validation failed: items empty');
@@ -87,7 +87,7 @@ app.post("/api/orders", protect, async (req, res) => {
     totalPrice = calculatedTotal;
     totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
     
-    console.log('📦 Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId });
+    console.log('📦 Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId, paymentMethod });
     
     const client = await pool.connect();
     
@@ -131,16 +131,21 @@ app.post("/api/orders", protect, async (req, res) => {
 
         const orderId = orderResult.rows[0].id;
 
-        // 3. Lưu Order Items
         for (const item of items) {
             if (!item.productId || !item.quantity || !item.unitPrice) {
                 throw new Error("Dữ liệu item trong giỏ hàng không hợp lệ.");
             }
+
+            const productId = parseInt(String(item.productId).replace(/\D+/g, ''), 10);
+            if (Number.isNaN(productId)) {
+                throw new Error("productId không hợp lệ");
+            }
+            console.log('🧾 Insert item', { raw: item.productId, parsed: productId, quantity: item.quantity, unitPrice: item.unitPrice });
             
             await client.query(
                 `INSERT INTO order_item(order_id, product_id, quantity, unit_price, image_url)
                  VALUES($1, $2, $3, $4, $5)`,
-                [orderId, item.productId, item.quantity, item.unitPrice, item.imageUrl]
+                [orderId, productId, item.quantity, item.unitPrice, item.imageUrl]
             );
         }
 
@@ -174,9 +179,9 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
     const payload = { orderId, customerId, items, totalPrice, status };
     try {
         amqpChannel.sendToQueue(SHIPPING_QUEUE, Buffer.from(JSON.stringify(payload)), { persistent: true });
-        console.log('✅ Published order event to RabbitMQ:', orderId);
+        console.log('Published order event to RabbitMQ:', orderId);
     } catch (err) {
-        console.error('❌ Failed to publish to RabbitMQ:', err.message);
+        console.error('Failed to publish to RabbitMQ:', err.message);
         throw err;
     }
 }
@@ -234,8 +239,6 @@ app.get("/api/orders/me", protect, async (req, res) => {
     }
 });
 
-// GET /api/orders/:id (Lấy chi tiết đơn hàng)
-// Lưu ý: đặt sau /me để tránh bắt nhầm id="me"
 app.get("/api/orders/:id", protect, async (req, res) => {
     try {
         const { id } = req.params;
@@ -288,13 +291,12 @@ app.get("/api/orders/:id", protect, async (req, res) => {
 });
 
 
-/* ===================== RUN SERVER ===================== */
 
 if (process.env.NODE_ENV !== 'test') {
     pool.connect()
-        .then(() => console.log(`✅ Order Service connected to DB`))
+        .then(() => console.log(` Order Service connected to DB`))
         .catch(err => {
-            console.error("❌ Order Service DB ERROR:", err.message);
+            console.error(" Order Service DB ERROR:", err.message);
             process.exit(1); 
         });
 
@@ -302,7 +304,7 @@ if (process.env.NODE_ENV !== 'test') {
     initRabbit().catch(() => {});
 
     app.listen(PORT, () =>
-        console.log(`🚀 Order Service running at http://localhost:${PORT}`)
+        console.log(` Order Service running at http://localhost:${PORT}`)
     );
 }
 

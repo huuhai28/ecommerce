@@ -340,8 +340,10 @@ function openCheckoutModal(){
     wrap.querySelector('#payNow').onclick = async () => {
         const items = Object.entries(cart).map(([id, qty]) => {
             const p = products.find(x => x.id == id);
+            // Chuyển id từ "p3" thành 3
+            const productId = parseInt(id.replace('p', ''));
             return { 
-                productId: id, 
+                productId: productId, 
                 quantity: qty, 
                 unitPrice: p.price,
                 imageUrl: p.img
@@ -373,30 +375,7 @@ function openCheckoutModal(){
         };
 
         try {
-            
-            console.log('Processing payment with method:', paymentMethod);
-            const paymentRes = await fetch(window.API_ENDPOINTS.PAYMENT.PROCESS, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${getToken()}`
-                },
-                body: JSON.stringify({
-                    orderId: null,
-                    amount: totalPrice,
-                    method: paymentMethod
-                })
-            });
-            
-            if (!paymentRes.ok) {
-                const paymentError = await paymentRes.json();
-                alert('Lỗi thanh toán: ' + (paymentError.message || 'Vui lòng thử lại'));
-                return;
-            }
-            
-            const paymentData = await paymentRes.json();
-            console.log('Payment processed:', paymentData);
-            
+            console.log('Creating order with method:', paymentMethod);
             
             const res = await fetch(window.API_ENDPOINTS.ORDERS.CREATE, {
                 method: 'POST',
@@ -409,7 +388,6 @@ function openCheckoutModal(){
                     totalPrice,
                     totalQuantity,
                     shippingAddress,
-                    paymentId: paymentData.payment?.payment_id,
                     paymentMethod: paymentMethod
                 })
             });

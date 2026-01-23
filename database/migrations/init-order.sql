@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS orders (
   order_tracking_number VARCHAR(255) UNIQUE,
   total_price DECIMAL(19,2),
   total_quantity INTEGER,
-  billing_address_id BIGINT REFERENCES address(id),
-  customer_id BIGINT, 
-  shipping_address_id BIGINT REFERENCES address(id),
+  billing_address_id INTEGER REFERENCES address(id),
+  customer_id INTEGER, 
+  shipping_address_id INTEGER REFERENCES address(id),
   status VARCHAR(128) DEFAULT 'PENDING',
   date_created TIMESTAMP DEFAULT NOW(),
   last_updated TIMESTAMP DEFAULT NOW()
@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS order_item (
   image_url VARCHAR(255),
   quantity INTEGER,
   unit_price DECIMAL(19,2),
-  order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
-  product_id BIGINT -- Reference to product in catalogue_db (no FK since different DB)
+  order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+  product_id INTEGER -- Reference to product in catalogue_db (no FK since different DB)
 );
 
 COMMIT;
