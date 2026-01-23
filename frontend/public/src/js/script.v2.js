@@ -238,7 +238,7 @@ function openLoginModal(){
         
         const nameParts = name.trim().split(/\s+/);
         const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || firstName;
+        const lastName = nameParts.slice(1).join(' ');
 
         try {
             const url = window.API_ENDPOINTS.AUTH.REGISTER;
@@ -314,9 +314,6 @@ function openCheckoutModal(){
         <input id='ch_phone' placeholder='Số điện thoại' style='width:100%;margin-bottom:8px'>
         <select id='ch_payment_method' style='width:100%;margin-bottom:8px;padding:8px'>
             <option value='COD'>Thanh toán khi nhận hàng (COD)</option>
-            <option value='BANK_TRANSFER'>Chuyển khoản ngân hàng</option>
-            <option value='MOMO'>Ví MoMo</option>
-            <option value='VNPAY'>VNPay</option>
         </select>
         <div id='qrCodeContainer' style='display:none;text-align:center;margin:15px 0;'>
             <p style='font-weight:bold;margin-bottom:10px'>Quét mã QR để chuyển khoản</p>
