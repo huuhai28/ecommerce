@@ -31,25 +31,24 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin: 20px;
+  margin-bottom: 20px;
 }
 
-.header-main {
+.header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 16px 24px;
   max-width: 1400px;
-  margin: 20px;
+  margin: 0 auto;
 }
 
 .brand {
   font-weight: 800;
-  font-size: 30px;
+  font-size: 28px;
   color: var(--primary);
-  letter-spacing: 3px;
-  padding-right: 28px;
-  flex: 0 0 170px;
+  letter-spacing: 2px;
+  flex: 0 0 auto;
 }
 
 .brand-container {
@@ -59,9 +58,10 @@ body {
 
 .main-nav {
   display: flex;
-  gap: 32px;
-  flex: 1;
-  margin-left: 24px;
+  gap: 24px;
+  flex: 0 1 auto;
+  margin-left: 32px;
+  white-space: nowrap;
 }
 
 .nav-item {
@@ -81,8 +81,10 @@ body {
 
 .header-actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .btn-cart {
@@ -457,6 +459,41 @@ footer {
 }
 
 @media (max-width: 700px) {
+  .header-content {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand {
+    flex: 1;
+    font-size: 24px;
+  }
+
+  .main-nav {
+    width: 100%;
+    margin-left: 0;
+    gap: 16px;
+    font-size: 13px;
+    order: 3;
+  }
+
+  .header-actions {
+    order: 2;
+    gap: 12px;
+  }
+
+  .btn-action {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .cart-panel {
+    right: 10px;
+    left: 10px;
+    width: auto;
+    bottom: 10px;
+  }
+
   .hero {
     flex-direction: column;
     align-items: center;
