@@ -75,10 +75,10 @@ app.post("/api/orders", protect, async (req, res) => {
     let { items, totalPrice, totalQuantity, billingAddress, shippingAddress, paymentId, paymentMethod } = req.body;
     const customerId = req.customerId;
 
-    console.log('📦 Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId, paymentMethod });
+    console.log(' Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId, paymentMethod });
 
     if (!items || items.length === 0) {
-        console.log('❌ Validation failed: items empty');
+        console.log(' Validation failed: items empty');
         return res.status(400).json({ message: "Giỏ hàng trống." });
     }
     

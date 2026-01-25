@@ -1,6 +1,4 @@
-  
 
- 
 const money = v => v.toLocaleString('vi-VN') + ' ₫';
 const formatDateTime = v => new Date(v).toLocaleString('vi-VN');
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -8,7 +6,7 @@ const uid = () => Math.random().toString(36).slice(2,9);
 const LS = localStorage;
 const KEY_CART = 'demo_cart_v1';
 const KEY_FALLBACK_PRODUCTS = 'demo_products_seed_v3';
-// Force clear old cache
+
 if (LS.getItem('demo_products_seed_v1')) LS.removeItem('demo_products_seed_v1');
 if (LS.getItem('demo_products_seed_v2')) LS.removeItem('demo_products_seed_v2');
 const SAMPLE_PRODUCTS = [
@@ -80,7 +78,6 @@ function checkTokenAndInitUser() {
  
 
 async function fetchProducts() {
-    // Force use local products with real images
     useSampleProductsFallback();
     return;
     
@@ -242,15 +239,15 @@ function openLoginModal(){
 
         try {
             const url = window.API_ENDPOINTS.AUTH.REGISTER;
-            console.log('📤 REGISTER:', {url, email, firstName, lastName});
+            console.log(' REGISTER:', {url, email, firstName, lastName});
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({email, password: pass, firstName, lastName})
             });
-            console.log('📥 REGISTER Response:', {status: res.status, ok: res.ok});
+            console.log(' REGISTER Response:', {status: res.status, ok: res.ok});
             const data = await res.json();
-            console.log('📄 REGISTER Data:', data);
+            console.log(' REGISTER Data:', data);
             if(res.ok) { 
                 LS.setItem('userToken', data.token);
                 LS.setItem('storedUser', JSON.stringify(data.customer));
@@ -262,7 +259,7 @@ function openLoginModal(){
                 alert(data.message || "Lỗi đăng ký"); 
             }
         } catch(e) { 
-            console.error('❌ REGISTER Error:', e);
+            console.error(' REGISTER Error:', e);
             alert("Lỗi kết nối: " + e.message); 
         }
     };
@@ -272,15 +269,15 @@ function openLoginModal(){
         const pass = wrap.querySelector('#inPass').value;
         try {
             const url = window.API_ENDPOINTS.AUTH.LOGIN;
-            console.log('📤 LOGIN:', {url, email});
+            console.log(' LOGIN:', {url, email});
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({email, password: pass})
             });
-            console.log('📥 LOGIN Response:', {status: res.status, ok: res.ok});
+            console.log(' LOGIN Response:', {status: res.status, ok: res.ok});
             const data = await res.json();
-            console.log('📄 LOGIN Data:', data);
+            console.log(' LOGIN Data:', data);
             if(res.ok) {
                 LS.setItem('userToken', data.token);
                 LS.setItem('storedUser', JSON.stringify(data.customer));
@@ -340,7 +337,6 @@ function openCheckoutModal(){
     wrap.querySelector('#payNow').onclick = async () => {
         const items = Object.entries(cart).map(([id, qty]) => {
             const p = products.find(x => x.id == id);
-            // Chuyển id từ "p3" thành 3
             const productId = parseInt(id.replace('p', ''));
             return { 
                 productId: productId, 
