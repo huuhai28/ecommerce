@@ -6,7 +6,7 @@ GATEWAY_PORT=${GATEWAY_PORT:-30004}
 BASE="http://${GATEWAY_HOST}:${GATEWAY_PORT}"
 
 echo "[E2E] Hitting products ..."
-curl -sf "${BASE}/api/products" | head -c 200 >/dev/null
+curl -sf "${BASE}/api/products" -o /dev/null
 
 EMAIL="e2e+$(date +%s)@example.com"
 PASS="123456"
