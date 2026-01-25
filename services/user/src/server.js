@@ -54,8 +54,11 @@ function protect(req, res, next) {
 app.post("/api/register", async (req, res) => {
     try {
         const { email, firstName, lastName, password } = req.body;
-        
-        if (!email || !firstName || !lastName || !password) {
+
+        const safeFirst = (firstName || "").trim();
+        const safeLast = (lastName || "").trim() || safeFirst; // nếu không có lastName, dùng firstName
+
+        if (!email || !safeFirst || !password) {
             return res.status(400).json({ message: "Thiếu thông tin bắt buộc." });
         }
 
@@ -63,7 +66,7 @@ app.post("/api/register", async (req, res) => {
 
         const result = await pool.query(
             "INSERT INTO customer (email, first_name, last_name, password_hash, date_created) VALUES ($1,$2,$3,$4,NOW()) RETURNING id, first_name, last_name, email",
-            [email, firstName, lastName, hash]
+            [email, safeFirst, safeLast, hash]
         );
 
         const newCustomer = result.rows[0];

@@ -71,6 +71,30 @@ function generateTrackingNumber() {
     return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
+function normalizeAddress(addr) {
+    if (!addr) return null;
+    // Cho phép client chỉ gửi name, phone, address
+    const street = addr.street || addr.address || addr.fullAddress || '';
+    const city = addr.city || null;
+    const state = addr.state || null;
+    const country = addr.country || null;
+    const zip = addr.zipCode || addr.zip || null;
+
+    // Nếu client gửi kèm name/phone, ghép vào street để không mất dữ liệu
+    const prefix = [addr.name, addr.phone].filter(Boolean).join(' - ');
+    const finalStreet = [prefix, street].filter(Boolean).join(' | ');
+
+    if (!finalStreet) return null;
+
+    return {
+        street: finalStreet,
+        city,
+        state,
+        country,
+        zipCode: zip,
+    };
+}
+
 app.post("/api/orders", protect, async (req, res) => {
     let { items, totalPrice, totalQuantity, billingAddress, shippingAddress, paymentId, paymentMethod } = req.body;
     const customerId = req.customerId;
@@ -98,22 +122,25 @@ app.post("/api/orders", protect, async (req, res) => {
         let billingAddressId = null;
         let shippingAddressId = null;
 
-        if (billingAddress) {
+        const normalizedBilling = normalizeAddress(billingAddress);
+        const normalizedShipping = normalizeAddress(shippingAddress);
+
+        if (normalizedBilling) {
             const addrResult = await client.query(
                 `INSERT INTO address(street, city, state, country, zip_code) 
                  VALUES($1, $2, $3, $4, $5) RETURNING id`,
-                [billingAddress.street, billingAddress.city, billingAddress.state, 
-                 billingAddress.country, billingAddress.zipCode]
+                [normalizedBilling.street, normalizedBilling.city, normalizedBilling.state, 
+                 normalizedBilling.country, normalizedBilling.zipCode]
             );
             billingAddressId = addrResult.rows[0].id;
         }
 
-        if (shippingAddress) {
+        if (normalizedShipping) {
             const addrResult = await client.query(
                 `INSERT INTO address(street, city, state, country, zip_code) 
                  VALUES($1, $2, $3, $4, $5) RETURNING id`,
-                [shippingAddress.street, shippingAddress.city, shippingAddress.state, 
-                 shippingAddress.country, shippingAddress.zipCode]
+                [normalizedShipping.street, normalizedShipping.city, normalizedShipping.state, 
+                 normalizedShipping.country, normalizedShipping.zipCode]
             );
             shippingAddressId = addrResult.rows[0].id;
         }
