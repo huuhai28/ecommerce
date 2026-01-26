@@ -57,9 +57,10 @@ metadata:
   name: postgres
   namespace: ecommerce
 spec:
+  type: NodePort
   ports:
   - port: 5432
     targetPort: 5432
+    nodePort: 30432
   selector:
     app: postgres
-  type: ClusterIP
