@@ -11,7 +11,6 @@ pipeline {
         GATEWAY_PORT = '30004'
     }
     stages {
-        parallel 
         stage('Prepare & Unit Test') {
             steps {
                 script {
