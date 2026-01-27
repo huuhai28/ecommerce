@@ -61,4 +61,4 @@ spec:
     - protocol: TCP
       port: 3005
       targetPort: 3005
-  type: ClusterIP
+  type: NodePort
