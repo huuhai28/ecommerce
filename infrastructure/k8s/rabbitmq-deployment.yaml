@@ -49,13 +49,15 @@ metadata:
   name: rabbitmq
   namespace: ecommerce
 spec:
+  type: NodePort
   ports:
   - name: amqp
     port: 5672
     targetPort: 5672
+    nodePort: 30672
   - name: management
     port: 15672
     targetPort: 15672
+    nodePort: 30673
   selector:
     app: rabbitmq
-  type: ClusterIP

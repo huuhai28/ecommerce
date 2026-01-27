@@ -56,9 +56,10 @@ metadata:
   name: catalogue-db
   namespace: ecommerce
 spec:
+  type: NodePort
   ports:
   - port: 5432
     targetPort: 5432
+    nodePort: 30433
   selector:
     app: catalogue-db
-  type: ClusterIP

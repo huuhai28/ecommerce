@@ -79,9 +79,10 @@ metadata:
   name: shipping-db
   namespace: ecommerce
 spec:
+  type: NodePort
   ports:
   - port: 5432
     targetPort: 5432
+    nodePort: 30436
   selector:
     app: shipping-db
-  type: ClusterIP
