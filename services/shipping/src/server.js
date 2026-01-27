@@ -1,5 +1,6 @@
 require('dotenv').config();
 const http = require('http');
+const url = require('url');
 const amqp = require('amqplib');
 const { Pool } = require('pg');
 
@@ -59,10 +60,32 @@ async function start(){
 }
 
 // Lightweight HTTP health endpoint for Kubernetes and debugging
-const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
+
+const server = http.createServer(async (req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  // Health check
+  if (parsedUrl.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+  // API: GET /api/shipping/:orderId
+  const match = parsedUrl.pathname.match(/^\/api\/shipping\/(\d+)$/);
+  if (req.method === 'GET' && match) {
+    const orderId = match[1];
+    try {
+      const result = await pool.query('SELECT * FROM shipping WHERE order_id = $1', [orderId]);
+      if (result.rows.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result.rows[0]));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
   res.writeHead(404);

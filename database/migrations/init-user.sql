@@ -1,9 +1,7 @@
--- Init script for USER service database
--- Creates customer and address tables
+
 
 BEGIN;
 
--- ==================== CUSTOMER & ADDRESS ====================
 
 CREATE TABLE IF NOT EXISTS customer (
   id SERIAL PRIMARY KEY,

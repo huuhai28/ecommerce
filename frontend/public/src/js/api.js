@@ -1,4 +1,3 @@
- 
 const API_CONFIG = window.API_CONFIG || {};
 const protocol = (API_CONFIG.protocol || window.location.protocol || 'http:').includes('https') ? 'https' : 'http';
 const defaultHost = API_CONFIG.defaultHost || window.location.hostname || 'localhost';
@@ -35,7 +34,8 @@ if (useGateway) {
         },
         SHIPPING: {
             CALCULATE: `${gatewayBase}/shipping/calculate`,
-            CREATE: `${gatewayBase}/shipping`
+            CREATE: `${gatewayBase}/shipping`,
+            TRACK: (orderId) => `${gatewayBase}/shipping/${orderId}`
         },
         PAYMENT: {
             PROCESS: `${gatewayBase}/payments`
@@ -74,4 +74,4 @@ if (useGateway) {
 
 window.API_ENDPOINTS = API_ENDPOINTS;
 
-console.log(`✅ API Config loaded (${activeMode})`);
+console.log(` API Config loaded (${activeMode})`);

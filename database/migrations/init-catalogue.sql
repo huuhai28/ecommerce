@@ -78,7 +78,7 @@ INSERT INTO product(sku, name, description, image_url, active, units_in_stock, u
 ('SKU-ACC-004','Aviator Sunglasses','Classic aviator style sunglasses','https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&h=600&fit=crop',TRUE,75,299000,4,NOW())
 ON CONFLICT DO NOTHING;
 
--- Insert sample countries
+
 INSERT INTO country(id, code, name) VALUES
 (1,'VN','Vietnam'),
 (2,'US','United States'),
@@ -86,7 +86,7 @@ INSERT INTO country(id, code, name) VALUES
 (4,'CA','Canada')
 ON CONFLICT DO NOTHING;
 
--- Insert sample states
+
 INSERT INTO state(name, country_id) VALUES
 ('Hanoi',1),
 ('Ho Chi Minh',1),

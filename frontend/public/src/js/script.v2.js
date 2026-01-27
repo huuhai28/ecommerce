@@ -1,4 +1,3 @@
-
 const money = v => v.toLocaleString('vi-VN') + ' ₫';
 const formatDateTime = v => new Date(v).toLocaleString('vi-VN');
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -414,6 +413,19 @@ async function fetchMyOrders(){
     return response.json();
 }
 
+// Hàm fetch trạng thái shipping
+async function fetchShippingStatus(orderId, token) {
+    try {
+        const res = await fetch(window.API_ENDPOINTS.SHIPPING.TRACK(orderId), {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
 function openOrdersModal(orders){
     const html = `
         <h3>Đơn hàng của bạn</h3>
@@ -439,8 +451,26 @@ function openOrdersModal(orders){
             </div>
             <div class="muted" style="margin:4px 0">${formatDateTime(order.dateCreated)}</div>
             <div class="muted" style="margin:4px 0">Tổng: ${money(order.totalPrice)}</div>
-            <div style="margin-top:6px">${items || '<div class="muted">Không có sản phẩm</div>'}</div>`;
+            <div style="margin-top:6px">${items || '<div class="muted">Không có sản phẩm</div>'}</div>
+            <button class="btnShippingStatus" data-orderid="${order.trackingNumber}" style="margin-top:8px;padding:6px 12px;border:none;background:var(--accent);color:#fff;border-radius:6px;cursor:pointer">Tra cứu shipping</button>
+            <div class="shippingStatus" id="shippingStatus-${order.trackingNumber}" style="margin-top:4px;font-size:14px;color:#333"></div>
+        `;
         list.appendChild(card);
+    });
+    // Gắn event cho nút tra cứu shipping
+    wrap.querySelectorAll('.btnShippingStatus').forEach(btn => {
+        btn.onclick = async function() {
+            const orderId = btn.getAttribute('data-orderid');
+            const token = getToken();
+            const statusDiv = document.getElementById(`shippingStatus-${orderId}`);
+            statusDiv.textContent = 'Đang tra cứu...';
+            const shipping = await fetchShippingStatus(orderId, token);
+            if (!shipping) {
+                statusDiv.textContent = 'Không tìm thấy thông tin giao hàng.';
+            } else {
+                statusDiv.textContent = `Trạng thái: ${shipping.status || 'Đang xử lý'} | Ngày tạo: ${formatDateTime(shipping.created_at)}`;
+            }
+        };
     });
 }
 
