@@ -49,7 +49,7 @@ metadata:
   name: rabbitmq
   namespace: ecommerce
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
   - name: amqp
     port: 5672
