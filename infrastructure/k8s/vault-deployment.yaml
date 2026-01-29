@@ -31,6 +31,7 @@ metadata:
   namespace: ecommerce
 data:
   vault-config.hcl: |
+    ui = true
     storage "file" {
       path = "/vault/file"
     }
