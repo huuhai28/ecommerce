@@ -1,6 +1,24 @@
 require('dotenv').config();
 const http = require('http');
 const url = require('url');
+const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+// Swagger setup
+const app = express();
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Shipping Service API',
+      version: '1.0.0',
+      description: 'API docs for Shipping Service'
+    }
+  },
+  apis: ['./src/server.js'],
+};
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const amqp = require('amqplib');
 const { Pool } = require('pg');
 
@@ -61,7 +79,45 @@ async function start(){
 
 // Lightweight HTTP health endpoint for Kubernetes and debugging
 
-const server = http.createServer(async (req, res) => {
+// Express route for health
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+/**
+ * @swagger
+ * /api/shipping/{orderId}:
+ *   get:
+ *     summary: Lấy trạng thái shipping cho đơn hàng
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Trạng thái shipping
+ *       404:
+ *         description: Không tìm thấy thông tin giao hàng
+ */
+app.get('/api/shipping/:orderId', async (req, res) => {
+  const orderId = req.params.orderId;
+  try {
+    const result = await pool.query('SELECT * FROM shipping WHERE order_id = $1', [orderId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fallback for other routes
+app.use((req, res) => res.status(404).end());
+
+const server = http.createServer(app);
   const parsedUrl = url.parse(req.url, true);
   // Health check
   if (parsedUrl.pathname === '/health') {
@@ -92,8 +148,9 @@ const server = http.createServer(async (req, res) => {
   res.end();
 });
 
+
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => console.log(`Shipping Service health server on ${PORT}`));
+  server.listen(PORT, () => console.log(`Shipping Service (Express+Swagger) running on ${PORT}`));
   start().catch(err => { console.error('Shipping service error', err); process.exit(1); });
 }
 

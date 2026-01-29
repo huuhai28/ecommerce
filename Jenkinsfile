@@ -19,7 +19,7 @@ pipeline {
                         def folderPath = (svc == 'frontend' || svc == 'gateway') ? svc : "services/${svc}"
                         dir(folderPath) {
                             if (sh(script: "find . -name '*.test.js' | wc -l", returnStdout: true).trim() != '0') {
-                                echo "--- Running Unit Test cho ${svc} ---"
+                                echo " Running Unit Test cho ${svc} "
                                 sh '''docker run --rm -v "$PWD":/app -w /app node:20-alpine sh -c "npm ci && npm test"'''
                             } else {
                                 echo "Bo qua ${svc} vi khong co file test"
