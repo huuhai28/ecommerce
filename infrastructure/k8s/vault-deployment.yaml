@@ -36,7 +36,7 @@ data:
       path = "/vault/file"
     }
     listener "tcp" {
-      address     = "0.0.0.0:8021"
+      address     = "0.0.0.0:8200"
       tls_disable = 1
     }
     disable_mlock = true
@@ -63,7 +63,7 @@ spec:
           - "server"
           - "-config=/vault/configmap/vault-config.hcl"
         ports:
-        - containerPort: 8021
+        - containerPort: 8200
         volumeMounts:
         - name: vault-config
           mountPath: /vault/configmap
@@ -86,8 +86,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 8021
-    targetPort: 8021
-    nodePort: 30821
+  - port: 8200
+    targetPort: 8200
+    nodePort: 30820
   selector:
     app: vault
