@@ -60,12 +60,13 @@ spec:
         image: hashicorp/vault:1.15.2
         args:
           - "server"
-          - "-config=/vault/config/vault-config.hcl"
+          - "-config=/vault/configmap/vault-config.hcl"
         ports:
         - containerPort: 8021
         volumeMounts:
         - name: vault-config
-          mountPath: /vault/config
+          mountPath: /vault/configmap
+          readOnly: true
         - name: vault-data
           mountPath: /vault/file
       volumes:
