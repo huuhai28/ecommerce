@@ -32,16 +32,12 @@ spec:
         - name: management
           containerPort: 15672
         env:
-        - name: RABBITMQ_DEFAULT_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: RABBITMQ_USER
-        - name: RABBITMQ_DEFAULT_PASS
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: RABBITMQ_PASS
+        - name: RABBITMQ_USER
+          value: "RABBITMQ_USER"
+        - name: RABBITMQ_PASS
+          value: "RABBITMQ_PASS"
+        - name: RABBITMQ_URL
+          value: "RABBITMQ_URL"
 ---
 apiVersion: v1
 kind: Service

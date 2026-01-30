@@ -81,15 +81,9 @@ spec:
             cpu: "200m"
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
+          value: "postgres"
         - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
+          value: "123456"
         - name: POSTGRES_DB
           value: "order_db"
         ports:
