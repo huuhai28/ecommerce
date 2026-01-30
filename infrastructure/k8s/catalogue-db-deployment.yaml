@@ -27,16 +27,12 @@ spec:
             memory: "256Mi"
             cpu: "200m"
         env:
-          - name: POSTGRES_USER
-            value: "postgres"
-          - name: POSTGRES_PASSWORD
-            value: "123456"
-          - name: DB_HOST
-            value: "catalogue-db"
-          - name: DB_PORT
-            value: "5432"
-          - name: POSTGRES_DB
-            value: "catalogue_db"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "123456"
+        - name: POSTGRES_DB
+          value: "catalogue_db"
         ports:
         - containerPort: 5432
         volumeMounts:
