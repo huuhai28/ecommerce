@@ -31,18 +31,8 @@ spec:
           value: "3005"
         - name: DB_HOST
           value: "payment-db"
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
-        - name: DB_DATABASE
-          value: "payment_db"
+        - name: DB_PORT
+          value: "5432"
         ports:
         - containerPort: 3005
 ---
