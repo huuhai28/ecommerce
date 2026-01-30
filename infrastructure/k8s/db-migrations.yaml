@@ -12,15 +12,11 @@ spec:
         image: postgres:14-alpine
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "123456"
+        - name: POSTGRES_DB
+          value: "user_db"
         command:
         - sh
         - -c
@@ -67,15 +63,11 @@ spec:
         image: postgres:14-alpine
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
+          value: "order_user"
+        - name: POSTGRES_PASSWORD
+          value: "order_password"
+        - name: POSTGRES_DB
+          value: "order_db"
         command:
         - sh
         - -c
@@ -132,15 +124,11 @@ spec:
         image: postgres:14-alpine
         env:
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "123456"
+        - name: POSTGRES_DB
+          value: "catalogue_db"
         command:
         - sh
         - -c
@@ -268,7 +256,7 @@ spec:
         - name: POSTGRES_PASSWORD
           value: "123456"
         - name: POSTGRES_DB
-          value: "migration_db"
+          value: "shipping_db"
         command:
         - sh
         - -c
