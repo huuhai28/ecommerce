@@ -5,11 +5,7 @@ metadata:
   namespace: ecommerce
 data:
   init-order.sql: |
-    
-    
     BEGIN;
-    
-    
     CREATE TABLE IF NOT EXISTS address (
       id SERIAL PRIMARY KEY,
       street VARCHAR(255),
@@ -81,9 +77,9 @@ spec:
             cpu: "200m"
         env:
         - name: POSTGRES_USER
-          value: "postgres"
+          value: "order_user"
         - name: POSTGRES_PASSWORD
-          value: "123456"
+          value: "order_password"
         - name: POSTGRES_DB
           value: "order_db"
         ports:
