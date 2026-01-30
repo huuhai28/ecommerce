@@ -28,11 +28,11 @@ spec:
             cpu: "200m"
         env:
           - name: DB_HOST
-            value: catalogue-db
+            value: "catalogue-db"
           - name: DB_PORT
             value: "5432"
           - name: POSTGRES_DB
-        value: "catalogue_db"
+            value: "catalogue_db"
         ports:
         - containerPort: 5432
         volumeMounts:
