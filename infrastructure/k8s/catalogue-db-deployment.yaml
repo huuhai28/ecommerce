@@ -27,6 +27,10 @@ spec:
             memory: "256Mi"
             cpu: "200m"
         env:
+          - name: POSTGRES_USER
+            value: "postgres"
+          - name: POSTGRES_PASSWORD
+            value: "123456"
           - name: DB_HOST
             value: "catalogue-db"
           - name: DB_PORT

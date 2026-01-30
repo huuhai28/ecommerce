@@ -77,9 +77,9 @@ spec:
             cpu: "200m"
         env:
         - name: POSTGRES_USER
-          value: "order_user"
+          value: "postgres"
         - name: POSTGRES_PASSWORD
-          value: "order_password"
+          value: "123456"
         - name: POSTGRES_DB
           value: "order_db"
         ports:
