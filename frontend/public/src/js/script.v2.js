@@ -204,7 +204,7 @@ function renderUserArea(){
             renderUserArea(); showFlash('Đã đăng xuất'); 
         };
     } else {
-        userArea.innerHTML = `<button id='btnLoginModal'>Đăng nhập</button>`;
+        userArea.innerHTML = `<button id='btnLoginModal' class='btn-orders'>Đăng nhập</button>`;
         document.getElementById('btnLoginModal').onclick = openLoginModal;
     }
 }
