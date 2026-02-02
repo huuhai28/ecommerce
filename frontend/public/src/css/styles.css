@@ -17,7 +17,6 @@ body {
   color: #111;
 }
 
-/* Header */
 .wrap {
   max-width: 1400px;
   margin: 0 auto;
@@ -137,15 +136,21 @@ body {
   background: var(--primary);
   color: #fff;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s;
+  font-weight: 300;
+  font-size: 14px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
+  min-width: 100px;
+  height: 40px;
 }
 
 #userArea button:hover {
   background: #3d8976;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
 }
 
 .hero {
@@ -184,7 +189,7 @@ body {
   border: none;
   padding: 14px 36px;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 300;
   cursor: pointer;
   font-size: 15px;
   transition: all 0.3s;
@@ -203,7 +208,7 @@ body {
   border: none;
   padding: 10px 24px;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 300;
   cursor: pointer;
   font-size: 14px;
   transition: all 0.3s;
@@ -229,7 +234,6 @@ body {
   border-radius: 12px;
 }
 
-/* Featured Section */
 .featured-section {
   margin-top: 60px;
   padding: 40px 0;
@@ -243,7 +247,6 @@ body {
   color: #111;
 }
 
-/* Grid */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -349,7 +352,6 @@ body {
   transform: scale(1.05);
 }
 
-/* Sidebar cart */
 .cart-panel {
   position: fixed;
   right: 20px;
