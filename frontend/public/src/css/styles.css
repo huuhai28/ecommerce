@@ -197,6 +197,25 @@ body {
   box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
 }
 
+.btn-orders {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
+}
+
+.btn-orders:hover {
+  background: #3d8976;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
+}
+
 .hero-image {
   flex: 1;
   text-align: center;
