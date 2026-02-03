@@ -194,16 +194,19 @@ function openProductModal(p){
  
 function renderUserArea(){
     userArea.innerHTML='';
+    const greetingEl = document.getElementById('userGreeting');
     if(currentUser && getToken()){
         const displayName = currentUser.firstName && currentUser.lastName 
             ? `${currentUser.firstName} ${currentUser.lastName}` 
             : (currentUser.firstName || 'User');
-        userArea.innerHTML = `<div class='muted'>Xin chào ${displayName}</div><button id='btnLogout'>Đăng xuất</button>`;
+        greetingEl.innerHTML = `Xin chào ${displayName}`;
+        userArea.innerHTML = `<button id='btnLogout' class='btn-orders'>Đăng xuất</button>`;
         document.getElementById('btnLogout').onclick = ()=>{ 
             currentUser=null; LS.removeItem('userToken'); LS.removeItem('storedUser');
             renderUserArea(); showFlash('Đã đăng xuất'); 
         };
     } else {
+        greetingEl.innerHTML = '';
         userArea.innerHTML = `<button id='btnLoginModal' class='btn-orders'>Đăng nhập</button>`;
         document.getElementById('btnLoginModal').onclick = openLoginModal;
     }
