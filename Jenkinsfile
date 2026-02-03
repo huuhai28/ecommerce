@@ -62,7 +62,7 @@ pipeline {
         }
         stage('Smoke Test') {
             steps {
-                sleep 15
+                sleep 30
                 sh 'chmod +x tests/e2e-smoke.sh'
                 sh "GATEWAY_HOST=${env.GATEWAY_HOST} GATEWAY_PORT=${env.GATEWAY_PORT} EMAIL=e2e-${BUILD_NUMBER}@test.com tests/e2e-smoke.sh"
             }
