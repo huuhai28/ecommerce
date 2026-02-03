@@ -1,6 +1,5 @@
 const request = require('supertest');
 
-// Mock database - state inside mock to avoid scope issues
 jest.mock('pg', () => {
   const products = [];
   let productId = 1;
@@ -9,7 +8,6 @@ jest.mock('pg', () => {
     async query(sql, params) {
       const lower = sql.toLowerCase();
 
-      // GET all products
       if (lower.includes('select') && lower.includes('from product') && !lower.includes('where')) {
         return {
           rows: products.map(p => ({
@@ -55,7 +53,6 @@ jest.mock('pg', () => {
   }
   return { 
     Pool: jest.fn(() => new FakePool()),
-    // Store products reference so tests can seed data
     __products: products,
     __productId: () => productId++
   };
@@ -75,7 +72,6 @@ describe('Catalogue API', () => {
   test('GET /api/products response has product structure', async () => {
     const res = await request(app).get('/api/products');
     expect(res.status).toBe(200);
-    // Even if array is empty, ensure structure is correct
     if (res.body.length > 0) {
       const product = res.body[0];
       expect(product).toHaveProperty('id');
@@ -85,7 +81,6 @@ describe('Catalogue API', () => {
   });
 
   test('GET /api/products/:id returns 404 for missing products', async () => {
-    // All test data is empty, so any ID should return 404
     const res = await request(app).get('/api/products/1');
     expect(res.status).toBe(404);
   });

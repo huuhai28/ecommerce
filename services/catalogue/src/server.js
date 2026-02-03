@@ -1,4 +1,4 @@
-// catalogue/server.js
+
 
 require('dotenv').config();
 const express = require('express');
@@ -6,21 +6,16 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3002; 
-
-// ---------------- Middleware ----------------
-// CORS handled by API Gateway
 app.use(express.json());
 
-// ---------------- Kết nối PostgreSQL ----------------
 const pool = new Pool({
     user: process.env.DB_USER,
-    host: process.env.DB_HOST, // SẼ LÀ 'postgres_db' trong Docker Compose
+    host: process.env.DB_HOST, 
     database: process.env.DB_DATABASE,
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
 });
 
-// Health check with DB ping
 app.get('/health', async (_req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -30,9 +25,6 @@ app.get('/health', async (_req, res) => {
     }
 });
 
-/* ===================== PRODUCTS ROUTES ===================== */
-
-// GET /api/products (Lấy tất cả sản phẩm)
 app.get("/api/products", async (req, res) => {
     try {
         const result = await pool.query(`
@@ -53,7 +45,6 @@ app.get("/api/products", async (req, res) => {
             ORDER BY p.id DESC
         `);
         
-        // Transform response to match frontend expectations
         const products = result.rows.map(p => ({
             id: p.id,
             sku: p.sku,
@@ -75,7 +66,6 @@ app.get("/api/products", async (req, res) => {
     }
 });
 
-// GET /api/products/:id (Lấy chi tiết sản phẩm)
 app.get("/api/products/:id", async (req, res) => {
     try {
         const { id } = req.params;
@@ -121,7 +111,6 @@ app.get("/api/products/:id", async (req, res) => {
     }
 });
 
-// GET /api/categories (Lấy tất cả categories)
 app.get("/api/categories", async (req, res) => {
     try {
         const result = await pool.query(`
@@ -137,18 +126,17 @@ app.get("/api/categories", async (req, res) => {
     }
 });
 
-/* ===================== RUN SERVER ===================== */
 
 if (process.env.NODE_ENV !== 'test') {
     pool.connect()
-        .then(() => console.log(`✅ Catalogue Service connected to DB`))
+        .then(() => console.log(`Catalogue Service connected to DB`))
         .catch(err => {
-            console.error("❌ Catalogue Service DB ERROR:", err.message);
+            console.error("Catalogue Service DB ERROR:", err.message);
             process.exit(1); 
         });
 
     app.listen(PORT, () =>
-        console.log(`🚀 Catalogue Service running at http://localhost:${PORT}`)
+        console.log(`Catalogue Service running at http://localhost:${PORT}`)
     );
 }
 

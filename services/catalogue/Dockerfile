@@ -9,7 +9,6 @@ RUN  npm install
 COPY src/ ./src/
 
 
-## PRODUCTION
 
 FROM node:20-alpine 
 

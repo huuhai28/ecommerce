@@ -19,7 +19,6 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-// Health check with a light DB probe
 app.get('/health', async (_req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -29,7 +28,6 @@ app.get('/health', async (_req, res) => {
     }
 });
 
-// ---------------- Middleware Bảo vệ (JWT) - Dùng cho các service khác nếu cần ----------------
 function protect(req, res, next) {
     const auth = req.headers.authorization;
     if (!auth || !auth.startsWith("Bearer ")) {
@@ -42,21 +40,18 @@ function protect(req, res, next) {
         if (err) {
             return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" }); 
         }
-        // Sử dụng customerId theo schema mới
         req.customerId = decoded.customerId;
         next();
     });
 }
 
-/* ===================== USER/AUTH ROUTES ===================== */
 
-// POST /api/register
 app.post("/api/register", async (req, res) => {
     try {
         const { email, firstName, lastName, password } = req.body;
 
         const safeFirst = (firstName || "").trim();
-        const safeLast = (lastName || "").trim() || safeFirst; // nếu không có lastName, dùng firstName
+        const safeLast = (lastName || "").trim() || safeFirst; 
 
         if (!email || !safeFirst || !password) {
             return res.status(400).json({ message: "Thiếu thông tin bắt buộc." });
@@ -96,7 +91,6 @@ app.post("/api/register", async (req, res) => {
     }
 });
 
-// POST /api/login
 app.post("/api/login", async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -141,7 +135,6 @@ app.post("/api/login", async (req, res) => {
     }
 });
 
-// GET /api/customers/:id (Lấy thông tin customer)
 app.get("/api/customers/:id", protect, async (req, res) => {
     try {
         const { id } = req.params;
@@ -168,18 +161,17 @@ app.get("/api/customers/:id", protect, async (req, res) => {
 });
 
 
-/* ===================== RUN SERVER ===================== */
 
 if (process.env.NODE_ENV !== 'test') {
     pool.connect()
-        .then(() => console.log(`✅ User Service connected to DB`))
+        .then(() => console.log(`User Service connected to DB`))
         .catch(err => {
-            console.error("❌ User Service DB ERROR:", err.message);
+            console.error("User Service DB ERROR:", err.message);
             process.exit(1); 
         });
 
     app.listen(PORT, () =>
-        console.log(`🚀 User Service running at http://localhost:${PORT}`)
+        console.log(`User Service running at http://localhost:${PORT}`)
     );
 }
 

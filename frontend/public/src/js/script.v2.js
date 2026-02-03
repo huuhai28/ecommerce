@@ -286,7 +286,7 @@ function openLoginModal(){
                 alert(data.message || "Lỗi đăng nhập"); 
             }
         } catch(e) { 
-            console.error('❌ LOGIN Error:', e);
+            console.error(' LOGIN Error:', e);
             alert("Lỗi kết nối: " + e.message); 
         }
     };
@@ -457,7 +457,6 @@ function openOrdersModal(orders){
         `;
         list.appendChild(card);
     });
-    // Gắn event cho nút tra cứu shipping
     wrap.querySelectorAll('.btnShippingStatus').forEach(btn => {
         btn.onclick = async function() {
             const orderId = btn.getAttribute('data-orderid');

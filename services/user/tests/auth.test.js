@@ -1,7 +1,6 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 
-// Mock database - moved inside mock to avoid scope issues
 jest.mock('pg', () => {
   const users = [];
   let idCounter = 1;

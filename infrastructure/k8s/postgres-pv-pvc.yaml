@@ -1,8 +1,6 @@
-# PersistentVolumes và PersistentVolumeClaims cho tất cả PostgreSQL databases
-# Dùng hostPath để lưu data trên worker node
+
 
 ---
-# User DB
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -42,7 +40,6 @@ spec:
       storage: 1Gi
 
 ---
-# Catalogue DB
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -81,7 +78,6 @@ spec:
       storage: 1Gi
 
 ---
-# Order DB
 apiVersion: v1
 kind: PersistentVolume
 metadata:

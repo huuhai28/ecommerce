@@ -1,4 +1,4 @@
-// order/server.js
+
 
 require('dotenv').config();
 const express = require('express');
@@ -66,21 +66,18 @@ function protect(req, res, next) {
     });
 }
 
-// Helper function: Tạo tracking number
 function generateTrackingNumber() {
     return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
 function normalizeAddress(addr) {
     if (!addr) return null;
-    // Cho phép client chỉ gửi name, phone, address
     const street = addr.street || addr.address || addr.fullAddress || '';
     const city = addr.city || null;
     const state = addr.state || null;
     const country = addr.country || null;
     const zip = addr.zipCode || addr.zip || null;
 
-    // Nếu client gửi kèm name/phone, ghép vào street để không mất dữ liệu
     const prefix = [addr.name, addr.phone].filter(Boolean).join(' - ');
     const finalStreet = [prefix, street].filter(Boolean).join(' | ');
 
@@ -118,7 +115,6 @@ app.post("/api/orders", protect, async (req, res) => {
     try {
         await client.query('BEGIN'); 
 
-        // 1. Tạo address nếu cần
         let billingAddressId = null;
         let shippingAddressId = null;
 
@@ -145,7 +141,6 @@ app.post("/api/orders", protect, async (req, res) => {
             shippingAddressId = addrResult.rows[0].id;
         }
 
-        // 2. Tạo Order chính
         const trackingNumber = generateTrackingNumber();
         const orderResult = await client.query(
             `INSERT INTO orders(order_tracking_number, total_price, total_quantity, 
@@ -178,7 +173,6 @@ app.post("/api/orders", protect, async (req, res) => {
 
         await client.query('COMMIT');
 
-        // Best-effort: publish order created event for shipping
         try { 
             await publishOrderCreated(orderId, customerId, items, totalPrice, 'PENDING'); 
         } catch (e) { 
@@ -213,7 +207,6 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
     }
 }
 
-// GET /api/orders/me (Lấy đơn hàng của customer đang đăng nhập)
 app.get("/api/orders/me", protect, async (req, res) => {
     try {
         const ordersResult = await pool.query(
@@ -229,7 +222,6 @@ app.get("/api/orders/me", protect, async (req, res) => {
             return res.json([]);
         }
 
-        // Lấy order items
         const orderIds = orders.map(o => o.id);
         const itemsResult = await pool.query(
             `SELECT order_id, product_id, quantity, unit_price, image_url 
@@ -284,7 +276,6 @@ app.get("/api/orders/:id", protect, async (req, res) => {
 
         const order = orderResult.rows[0];
 
-        // Lấy order items
         const itemsResult = await pool.query(
             `SELECT id, product_id, quantity, unit_price, image_url 
              FROM order_item WHERE order_id=$1`,
@@ -327,7 +318,6 @@ if (process.env.NODE_ENV !== 'test') {
             process.exit(1); 
         });
 
-    // Initialize RabbitMQ connection (best-effort)
     initRabbit().catch(() => {});
 
     app.listen(PORT, () =>

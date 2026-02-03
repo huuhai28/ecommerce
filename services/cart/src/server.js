@@ -1,15 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
-// CORS handled by API Gateway
 
 const app = express();
 const PORT = process.env.PORT || 3006;
 
-// CORS handled by API Gateway
 app.use(express.json());
 
-// PostgreSQL pool for durable carts
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,

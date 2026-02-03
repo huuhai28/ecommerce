@@ -1,12 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
-// CORS handled by API Gateway
 
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// CORS handled by API Gateway
 app.use(express.json());
 
 const pool = new Pool({
@@ -17,7 +15,6 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-// Health check with DB ping
 app.get('/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1');
@@ -27,18 +24,15 @@ app.get('/health', async (_req, res) => {
   }
 });
 
-// Simple payments API (mock)
 app.post('/api/payments', async (req, res) => {
   const { amount, method } = req.body;
   let { orderId } = req.body;
   
   if (!amount) return res.status(400).json({ message: 'amount required' });
   
-  // orderId có thể null nếu payment được tạo trước order
   orderId = orderId || null;
 
   try {
-    // Insert a payment record (mock)
     const paymentId = 'pay_' + Date.now();
     const result = await pool.query(
       'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, payment_id, status',
