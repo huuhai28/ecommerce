@@ -34,15 +34,6 @@ spec:
         - name: DB_HOST
           value: "catalogue-db"
         - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ecommerce-secrets
-              key: DB_PASSWORD
         - name: DB_DATABASE
           value: "catalogue_db"
         - name: DB_PORT
