@@ -43,7 +43,7 @@ pipeline {
                         if (params.SERVICE != 'all' || params.SERVICE == 'all') {
                             jobs[svc] = {
                                 stage("Build ${svc}") {
-                                    def imageName = "ecommerce-${svc}"
+                                    def imageName = "${svc}-service"
                                     def k8sName = (svc == 'frontend') ? 'frontend-service' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                                     
                                     sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:latest ./${folderPath}"
