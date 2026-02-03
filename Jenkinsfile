@@ -39,7 +39,8 @@ pipeline {
                         def folderPath = (svc == 'frontend' || svc == 'gateway') ? svc : "services/${svc}"
                         def isChanged = currentBuild.changeSets.any { cs -> cs.items.any { item -> item.affectedPaths.any { path -> path.startsWith(folderPath)} } }
                         
-                        if (params.SERVICE != 'all' || isChanged) {
+                        // Rebuild nếu: (1) chọn specific service, hoặc (2) chọn "all"
+                        if (params.SERVICE != 'all' || params.SERVICE == 'all') {
                             jobs[svc] = {
                                 stage("Build ${svc}") {
                                     def imageName = "ecommerce-${svc}"
@@ -55,7 +56,7 @@ pipeline {
                     if (jobs) {
                         parallel jobs
                     } else {
-                        echo "Không có service nào thay đổi, bỏ qua Build."
+                        echo "Không có service nào để rebuild."
                     }
                 }
             }

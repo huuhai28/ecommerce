@@ -48,6 +48,7 @@ function protect(req, res, next) {
 
 app.post("/api/register", async (req, res) => {
     try {
+        console.log("Register request received:", req.body);
         const { email, firstName, lastName, password } = req.body;
 
         const safeFirst = (firstName || "").trim();
@@ -93,6 +94,7 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
     try {
+        console.log("Login request received:", req.body);
         const { email, password } = req.body;
 
         if (!email || !password) {
