@@ -22,7 +22,7 @@ pipeline {
         stage('Apply Infrastructure') {
             steps {
                 script {
-                    sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce'
+                    sh 'kubectl apply -f infrastructure/k8s/'
                 }
             }
         }
