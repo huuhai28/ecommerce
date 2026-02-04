@@ -82,6 +82,29 @@ spec:
           name: cart-db-init
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: cart-db-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/k8s-data/cart-db
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - worker-node
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: cart-db-pvc
