@@ -38,7 +38,7 @@ spec:
         - name: DB_PASSWORD
           value: "HaiMetRoi123"
         - name: DB_DATABASE
-          value: "ecommerce_db"
+          value: "cart_db"
         ports:
         - containerPort: 3006
 ---
