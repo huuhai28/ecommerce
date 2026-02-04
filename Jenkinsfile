@@ -19,6 +19,14 @@ pipeline {
                 }
             }
         }
+        stage('rollout deployment') {
+            steps {
+                script {
+                    sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce'
+                }
+            }
+        }
+
         
         stage('Prepare & Unit Test') {
             steps {
