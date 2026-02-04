@@ -11,6 +11,15 @@ pipeline {
         GATEWAY_PORT = '30004'
     }
     stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    echo "Pulling latest code from git"
+                    sh 'git pull origin main'
+                }
+            }
+        }
+        
         stage('Prepare & Unit Test') {
             steps {
                 script {
