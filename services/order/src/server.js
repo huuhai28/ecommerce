@@ -162,7 +162,7 @@ app.post("/api/orders", protect, async (req, res) => {
             if (Number.isNaN(productId)) {
                 throw new Error("productId không hợp lệ");
             }
-            console.log('🧾 Insert item', { raw: item.productId, parsed: productId, quantity: item.quantity, unitPrice: item.unitPrice });
+            console.log(' Insert item', { raw: item.productId, parsed: productId, quantity: item.quantity, unitPrice: item.unitPrice });
             
             await client.query(
                 `INSERT INTO order_item(order_id, product_id, quantity, unit_price, image_url)
