@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cart-db-init
+  namespace: ecommerce
+data:
+  init-cart.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS carts (
+      user_id TEXT PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    COMMIT;
+  init-cart.sh: |
+    #!/bin/sh
+    set -e
+    echo "Creating cart_db database if missing..."
+    psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE cart_db;" || true
+    echo "Applying cart schema..."
+    psql -U "$POSTGRES_USER" -d cart_db -f /docker-entrypoint-initdb.d/init-cart.sql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-db
+  namespace: ecommerce
+  labels:
+    app: cart-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart-db
+  template:
+    metadata:
+      labels:
+        app: cart-db
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
+      containers:
+      - name: postgres
+        image: postgres:14-alpine
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        - name: POSTGRES_DB
+          value: "cart_db"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql/data
+          subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: cart-db-pvc
+      - name: init-script
+        configMap:
+          name: cart-db-init
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cart-db-pvc
+  namespace: ecommerce
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-db
+  namespace: ecommerce
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: cart-db
+  type: ClusterIP

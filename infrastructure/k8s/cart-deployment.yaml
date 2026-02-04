@@ -30,7 +30,7 @@ spec:
         - name: PORT
           value: "3006"
         - name: DB_HOST
-          value: "postgres"
+          value: "cart-db"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
@@ -38,7 +38,7 @@ spec:
         - name: DB_PASSWORD
           value: "HaiMetRoi123"
         - name: DB_DATABASE
-          value: "cart_db"
+          value: "ecommerce_db"
         ports:
         - containerPort: 3006
 ---
