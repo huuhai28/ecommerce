@@ -8,6 +8,13 @@ const app = express();
 const PORT = process.env.PORT || 3002; 
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url} - IP: ${req.ip}`);
+    next();
+});
+
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST, 
