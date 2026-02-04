@@ -19,7 +19,7 @@ pipeline {
                 }
             }
         }
-        stage('rollout deployment') {
+        stage('Apply Infrastructure') {
             steps {
                 script {
                     sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce'
@@ -65,7 +65,6 @@ pipeline {
                                     sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:latest ./${folderPath}"
                                     sh "docker push ${DOCKER_HUB_USER}/${imageName}:latest"
                                     sh "kubectl rollout restart deployment/${k8sName} -n ecommerce"
-                                    sh "kubectl rollout restart deployment -n ecommerce"
                                 }
                             }
                         }
