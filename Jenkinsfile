@@ -48,7 +48,6 @@ pipeline {
                         def folderPath = (svc == 'frontend' || svc == 'gateway') ? svc : "services/${svc}"
                         def isChanged = currentBuild.changeSets.any { cs -> cs.items.any { item -> item.affectedPaths.any { path -> path.startsWith(folderPath)} } }
                         
-                        // Rebuild nếu: (1) chọn specific service, hoặc (2) chọn "all"
                         if (params.SERVICE != 'all' || params.SERVICE == 'all') {
                             jobs[svc] = {
                                 stage("Build ${svc}") {
@@ -58,6 +57,7 @@ pipeline {
                                     sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:latest ./${folderPath}"
                                     sh "docker push ${DOCKER_HUB_USER}/${imageName}:latest"
                                     sh "kubectl rollout restart deployment/${k8sName} -n ecommerce"
+                                    sh "kubectl rollout restart deployment -n ecommerce"
                                 }
                             }
                         }
