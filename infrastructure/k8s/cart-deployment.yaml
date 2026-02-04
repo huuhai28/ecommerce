@@ -18,7 +18,7 @@ spec:
       containers:
       - name: cart-service
         image: huuhai123/cart-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         resources:
           requests:
             memory: "128Mi"
