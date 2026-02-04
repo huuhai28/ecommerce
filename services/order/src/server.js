@@ -108,7 +108,7 @@ app.post("/api/orders", protect, async (req, res) => {
     totalPrice = calculatedTotal;
     totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
     
-    console.log('📦 Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId, paymentMethod });
+    console.log(' Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId, paymentMethod });
     
     const client = await pool.connect();
     
