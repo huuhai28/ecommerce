@@ -15,6 +15,13 @@ data:
       date_created TIMESTAMP DEFAULT NOW(),
       processed_at TIMESTAMP
     );
+  init-shipping.sh: |
+    #!/bin/sh
+    set -e
+    echo "Creating shipping_db database if missing..."
+    psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE shipping_db;" || true
+    echo "Applying shipping schema..."
+    psql -U "$POSTGRES_USER" -d shipping_db -f /docker-entrypoint-initdb.d/init-shipping.sql
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -74,6 +81,7 @@ spec:
       - name: init-script
         configMap:
           name: shipping-db-init
+          defaultMode: 0755
 ---
 apiVersion: v1
 kind: Service

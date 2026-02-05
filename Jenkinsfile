@@ -22,13 +22,11 @@ pipeline {
         stage('Apply Infrastructure') {
             steps {
                 script {
-                    // Apply cluster-scoped resources first (no namespace)
                     sh 'kubectl apply -f infrastructure/k8s/namespace.yaml'
                     sh 'kubectl apply -f infrastructure/k8s/storageclass-local.yaml'
                     sh 'kubectl apply -f infrastructure/k8s/postgres-pv-pvc.yaml'
                     sh 'kubectl apply -f infrastructure/k8s/cart-db-deployment.yaml'
                     
-                    // Apply namespaced resources
                     sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce || true'
                 }
             }

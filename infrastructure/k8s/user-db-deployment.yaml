@@ -98,6 +98,7 @@ spec:
       - name: init-script
         configMap:
           name: user-db-init
+          defaultMode: 0755
 ---
 apiVersion: v1
 kind: Service
