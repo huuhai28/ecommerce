@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-migration-scripts
+  namespace: ecommerce
+data:
+  init-all-dbs.sh: |
+    #!/bin/bash
+    set -e
+
+    PGUSER=${POSTGRES_USER:-postgres}
+    PGPASSWORD=${POSTGRES_PASSWORD}
+    export PGPASSWORD
+
+    echo "=== Database Migration & Seeding Started ==="
+
+    # Function to wait for DB and run migration
+    migrate_db() {
+      local db_host=$1
+      local db_name=$2
+      local sql_file=$3
+      
+      echo "Waiting for $db_name at $db_host..."
+      for i in {1..30}; do
+        if pg_isready -h $db_host -U $PGUSER -d postgres 2>/dev/null; then
+          echo "Connected to $db_host"
+          break
+        fi
+        echo "Attempt $i: Waiting for database..."
+        sleep 2
+      done
+
+      echo "Creating database $db_name if not exists..."
+      psql -h $db_host -U $PGUSER -d postgres -c "CREATE DATABASE $db_name;" 2>/dev/null || echo "$db_name already exists"
+
+      echo "Running migration for $db_name..."
+      psql -h $db_host -U $PGUSER -d $db_name -f /scripts/$sql_file
+
+      echo "✓ $db_name migration completed"
+    }
+
+    # Migrate all databases
+    migrate_db "catalogue-db" "catalogue_db" "init-catalogue.sql"
+    migrate_db "order-db" "order_db" "init-order.sql"
+    migrate_db "payment-db" "payment_db" "init-payment.sql"
+    migrate_db "shipping-db" "shipping_db" "init-shipping.sql"
+    migrate_db "user-db" "user_db" "init-user.sql"
+    migrate_db "cart-db" "cart_db" "init-cart.sql"
+
+    echo "=== All Database Migrations Completed Successfully ==="
+
+  init-catalogue.sql: |
+    -- Init script for CATALOGUE service database
+    -- Creates product and category tables
+
+    BEGIN;
+
+    -- ==================== PRODUCT CATEGORY & PRODUCT ====================
+
+    CREATE TABLE IF NOT EXISTS product_category (
+      id SERIAL PRIMARY KEY,
+      category_name VARCHAR(255) NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS product (
+      id SERIAL PRIMARY KEY,
+      sku VARCHAR(255) UNIQUE,
+      name VARCHAR(255) NOT NULL,
+      description VARCHAR(255),
+      unit_price DECIMAL(13,2) NOT NULL DEFAULT 0,
+      image_url VARCHAR(255),
+      active BOOLEAN DEFAULT TRUE,
+      units_in_stock INTEGER DEFAULT 0,
+      date_created TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW(),
+      category_id BIGINT REFERENCES product_category(id)
+    );
+
+    -- ==================== COUNTRY & STATE ====================
+
+    CREATE TABLE IF NOT EXISTS country (
+      id SMALLINT PRIMARY KEY,
+      code VARCHAR(2),
+      name VARCHAR(255) NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS state (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      country_id SMALLINT REFERENCES country(id)
+    );
+
+    -- ==================== SEED DATA ====================
+
+    -- Insert product categories
+    INSERT INTO product_category(category_name) VALUES
+    ('Shirts'),
+    ('Jackets'),
+    ('Pants'),
+    ('Accessories')
+    ON CONFLICT DO NOTHING;
+
+    -- Insert sample products (Fashion items matching frontend design)
+    INSERT INTO product(sku, name, description, image_url, active, units_in_stock, unit_price, category_id, date_created) VALUES
+    -- Hawaiian Shirts Collection
+    ('SKU-SHIRT-001','Colorful Hawaiian T-Shirt','Premium cotton Hawaiian print shirt with vibrant colors','https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&h=600&fit=crop',TRUE,50,139000,1,NOW()),
+    ('SKU-SHIRT-002','Tropical Print Short Sleeve','Comfortable tropical pattern shirt for summer','https://images.unsplash.com/photo-1621072156002-e2fccdc0b176?w=800&h=600&fit=crop',TRUE,45,149000,1,NOW()),
+    ('SKU-SHIRT-003','Green Leaf Pattern Shirt','Casual shirt with modern leaf design','https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&h=600&fit=crop',TRUE,60,129000,1,NOW()),
+    ('SKU-SHIRT-004','Brown Floral Hawaiian Shirt','Classic Hawaiian style with brown tones','https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&h=600&fit=crop',TRUE,40,159000,1,NOW()),
+    ('SKU-SHIRT-005','Pink Floral Short Sleeve','Light pink shirt with floral patterns','https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=800&h=600&fit=crop',TRUE,55,145000,1,NOW()),
+    -- Jackets & Outerwear
+    ('SKU-JACKET-001','Red & Blue Bomber Jacket','Stylish color-block bomber jacket','https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=600&fit=crop',TRUE,30,599000,2,NOW()),
+    ('SKU-JACKET-002','Orange Sport Jacket','Modern orange windbreaker jacket','https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&h=600&fit=crop',TRUE,35,549000,2,NOW()),
+    ('SKU-JACKET-003','Beige Trench Coat','Classic beige trench coat for autumn','https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&h=600&fit=crop',TRUE,25,899000,2,NOW()),
+    ('SKU-JACKET-004','Navy Blue Blazer','Formal navy blazer for business','https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=800&h=600&fit=crop',TRUE,40,799000,2,NOW()),
+    ('SKU-JACKET-005','Light Gray Hoodie','Comfortable gray hooded jacket','https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&h=600&fit=crop',TRUE,50,349000,2,NOW()),
+    ('SKU-JACKET-006','Green Olive Shirt Jacket','Utility style shirt jacket','https://images.unsplash.com/photo-1591213369363-1155cda2c50a?w=800&h=600&fit=crop',TRUE,45,459000,2,NOW()),
+    -- Pants Collection
+    ('SKU-PANTS-001','Classic Blue Denim Jeans','Premium denim jeans with perfect fit','https://images.unsplash.com/photo-1542272604-787c3835535d?w=800&h=600&fit=crop',TRUE,70,499000,3,NOW()),
+    ('SKU-PANTS-002','Black Slim Fit Jeans','Modern slim fit black jeans','https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&h=600&fit=crop',TRUE,65,529000,3,NOW()),
+    ('SKU-PANTS-003','Khaki Chino Pants','Comfortable khaki chinos for casual wear','https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=800&h=600&fit=crop',TRUE,55,399000,3,NOW()),
+    ('SKU-PANTS-004','Navy Cargo Pants','Functional cargo pants with multiple pockets','https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&h=600&fit=crop',TRUE,60,449000,3,NOW()),
+    -- Accessories
+    ('SKU-ACC-001','Black Cap','Classic black baseball cap','https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&h=600&fit=crop',TRUE,100,99000,4,NOW()),
+    ('SKU-ACC-002','Brown Leather Belt','Premium leather belt with silver buckle','https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&h=600&fit=crop',TRUE,80,199000,4,NOW()),
+    ('SKU-ACC-003','Navy Beanie Hat','Warm winter beanie','https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=800&h=600&fit=crop',TRUE,90,79000,4,NOW()),
+    ('SKU-ACC-004','Aviator Sunglasses','Classic aviator style sunglasses','https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&h=600&fit=crop',TRUE,75,299000,4,NOW())
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO country(id, code, name) VALUES
+    (1,'VN','Vietnam'),
+    (2,'US','United States'),
+    (3,'BR','Brazil'),
+    (4,'CA','Canada')
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO state(name, country_id) VALUES
+    ('Hanoi',1),
+    ('Ho Chi Minh',1),
+    ('New York',2),
+    ('California',2)
+    ON CONFLICT DO NOTHING;
+
+    COMMIT;
+
+  init-order.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS address (
+      id SERIAL PRIMARY KEY,
+      street VARCHAR(255),
+      city VARCHAR(255),
+      state VARCHAR(255),
+      country VARCHAR(255),
+      zip_code VARCHAR(255)
+    );
+
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      order_tracking_number VARCHAR(255) UNIQUE,
+      total_price DECIMAL(19,2),
+      total_quantity INTEGER,
+      billing_address_id INTEGER REFERENCES address(id),
+      customer_id INTEGER, 
+      shipping_address_id INTEGER REFERENCES address(id),
+      status VARCHAR(128) DEFAULT 'PENDING',
+      date_created TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS order_item (
+      id SERIAL PRIMARY KEY,
+      image_url VARCHAR(255),
+      quantity INTEGER,
+      unit_price DECIMAL(19,2),
+      order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER -- Reference to product in catalogue_db (no FK since different DB)
+    );
+
+    COMMIT;
+
+  init-payment.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      payment_id VARCHAR(255) UNIQUE NOT NULL,
+      order_id BIGINT,
+      provider VARCHAR(255),
+      amount DECIMAL(19,2),
+      status VARCHAR(128),
+      metadata JSONB,
+      date_created TIMESTAMP DEFAULT NOW()
+    );
+
+    COMMIT;
+
+  init-shipping.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS shipping (
+      id SERIAL PRIMARY KEY,
+      order_id BIGINT,
+      user_id BIGINT,
+      address TEXT,
+      items JSONB,
+      status VARCHAR(128) DEFAULT 'pending',
+      date_created TIMESTAMP DEFAULT NOW(),
+      processed_at TIMESTAMP
+    );
+
+    COMMIT;
+
+  init-user.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS customer (
+      id SERIAL PRIMARY KEY,
+      first_name VARCHAR(255) NOT NULL,
+      last_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT,
+      date_created TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS address (
+      id SERIAL PRIMARY KEY,
+      street VARCHAR(255),
+      city VARCHAR(255),
+      state VARCHAR(255),
+      country VARCHAR(255),
+      zip_code VARCHAR(255)
+    );
+
+    COMMIT;
+
+  init-cart.sql: |
+    BEGIN;
+
+    CREATE TABLE IF NOT EXISTS carts (
+      user_id TEXT PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    COMMIT;
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init-migration
+  namespace: ecommerce
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      serviceAccountName: default
+      restartPolicy: Never
+      containers:
+      - name: db-migration
+        image: postgres:14-alpine
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "/scripts/init-all-dbs.sh"]
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        volumeMounts:
+        - name: migration-scripts
+          mountPath: /scripts
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: migration-scripts
+        configMap:
+          name: db-migration-scripts
+          defaultMode: 0755

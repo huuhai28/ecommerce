@@ -26,7 +26,6 @@ pipeline {
                     sh 'kubectl apply -f infrastructure/k8s/storageclass-local.yaml'
                     sh 'kubectl apply -f infrastructure/k8s/postgres-pv-pvc.yaml'
                     sh 'kubectl apply -f infrastructure/k8s/cart-db-deployment.yaml'
-                    
                     sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce || true'
                 }
             }
