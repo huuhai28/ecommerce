@@ -13,6 +13,9 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   
   storageClassName: local-storage
+  claimRef:
+    name: user-db-pvc
+    namespace: ecommerce
   hostPath:
     path: /mnt/k8s-data/user-db
     type: DirectoryOrCreate
@@ -51,6 +54,9 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
+  claimRef:
+    name: catalogue-db-pvc
+    namespace: ecommerce
   hostPath:
     path: /mnt/k8s-data/catalogue-db
     type: DirectoryOrCreate
@@ -89,6 +95,9 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
+  claimRef:
+    name: order-db-pvc
+    namespace: ecommerce
   hostPath:
     path: /mnt/k8s-data/order-db
     type: DirectoryOrCreate
@@ -128,6 +137,9 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
+  claimRef:
+    name: payment-db-pvc
+    namespace: ecommerce
   hostPath:
     path: /mnt/k8s-data/payment-db
     type: DirectoryOrCreate
@@ -167,6 +179,9 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
+  claimRef:
+    name: shipping-db-pvc
+    namespace: ecommerce
   hostPath:
     path: /mnt/k8s-data/shipping-db
     type: DirectoryOrCreate
