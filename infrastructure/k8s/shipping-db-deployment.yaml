@@ -19,7 +19,7 @@ data:
     #!/bin/sh
     set -e
     echo "Creating shipping_db database if missing..."
-    psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE shipping_db;" || true
+    psql -U "$POSTGRES_USER" -d template1 -c "CREATE DATABASE shipping_db;" || true
     echo "Applying shipping schema..."
     psql -U "$POSTGRES_USER" -d shipping_db -f /docker-entrypoint-initdb.d/init-shipping.sql
 ---
@@ -72,6 +72,31 @@ spec:
         - name: pgdata
           mountPath: /var/lib/postgresql/data
           subPath: pgdata
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d
+      - name: db-bootstrap
+        image: postgres:14-alpine
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c']
+        args:
+        - >
+          until pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER";
+          do echo Waiting for postgres...; sleep 2; done;
+          psql -U "$POSTGRES_USER" -d template1 -c "CREATE DATABASE shipping_db;" || true;
+          psql -U "$POSTGRES_USER" -d shipping_db -f /docker-entrypoint-initdb.d/init-shipping.sql || true;
+          tail -f /dev/null
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        volumeMounts:
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
       volumes:
