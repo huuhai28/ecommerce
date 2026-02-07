@@ -6,12 +6,36 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3002; 
+const LOG_LEVEL = (process.env.LOG_LEVEL || 'info').toLowerCase();
+const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+const isDebug = LOG_LEVELS[LOG_LEVEL] >= LOG_LEVELS.debug;
+
+const log = (level, message, meta) => {
+    if (LOG_LEVELS[level] > LOG_LEVELS[LOG_LEVEL]) {
+        return;
+    }
+
+    const timestamp = new Date().toISOString();
+    if (meta) {
+        console.log(`[${timestamp}] ${level.toUpperCase()} ${message}`, meta);
+    } else {
+        console.log(`[${timestamp}] ${level.toUpperCase()} ${message}`);
+    }
+};
+
 app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url} - IP: ${req.ip}`);
+    log('info', `${req.method} ${req.url} - IP: ${req.ip}`);
+    if (isDebug) {
+        const startedAt = Date.now();
+        res.on('finish', () => {
+            log('debug', `${req.method} ${req.url} - ${res.statusCode}`, {
+                durationMs: Date.now() - startedAt
+            });
+        });
+    }
     next();
 });
 
@@ -23,18 +47,43 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
+const dbQuery = async (text, params) => {
+    const startedAt = Date.now();
+    try {
+        const result = await pool.query(text, params);
+        if (isDebug) {
+            log('debug', 'DB query ok', {
+                durationMs: Date.now() - startedAt,
+                rows: result.rowCount
+            });
+        }
+        return result;
+    } catch (err) {
+        log('error', 'DB query failed', {
+            durationMs: Date.now() - startedAt,
+            error: err.message
+        });
+        throw err;
+    }
+};
+
+pool.on('error', (err) => {
+    log('error', 'Unexpected DB error', { error: err.message });
+});
+
 app.get('/health', async (_req, res) => {
     try {
-        await pool.query('SELECT 1');
+        await dbQuery('SELECT 1');
         res.json({ status: 'ok' });
     } catch (err) {
+        log('error', 'Health check failed', { error: err.message });
         res.status(500).json({ status: 'error', error: err.message });
     }
 });
 
 app.get("/api/products", async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await dbQuery(`
             SELECT 
                 p.id, 
                 p.sku,
@@ -68,7 +117,7 @@ app.get("/api/products", async (req, res) => {
 
         res.json(products);
     } catch (err) {
-        console.error("Lỗi lấy sản phẩm:", err.message);
+        log('error', 'Failed to fetch products', { error: err.message });
         res.status(500).json({ message: "Lỗi server khi lấy danh sách sản phẩm." });
     }
 });
@@ -76,7 +125,7 @@ app.get("/api/products", async (req, res) => {
 app.get("/api/products/:id", async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await pool.query(`
+        const result = await dbQuery(`
             SELECT 
                 p.id, 
                 p.sku,
@@ -113,14 +162,14 @@ app.get("/api/products/:id", async (req, res) => {
             categoryId: p.category_id
         });
     } catch (err) {
-        console.error("Lỗi lấy sản phẩm:", err.message);
+        log('error', 'Failed to fetch product', { error: err.message, productId: req.params.id });
         res.status(500).json({ message: "Lỗi server." });
     }
 });
 
 app.get("/api/categories", async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await dbQuery(`
             SELECT id, category_name FROM product_category ORDER BY category_name
         `);
         res.json(result.rows.map(c => ({
@@ -128,7 +177,7 @@ app.get("/api/categories", async (req, res) => {
             name: c.category_name
         })));
     } catch (err) {
-        console.error("Lỗi lấy categories:", err.message);
+        log('error', 'Failed to fetch categories', { error: err.message });
         res.status(500).json({ message: "Lỗi server." });
     }
 });
@@ -136,14 +185,14 @@ app.get("/api/categories", async (req, res) => {
 
 if (process.env.NODE_ENV !== 'test') {
     pool.connect()
-        .then(() => console.log(`Catalogue Service connected to DB`))
+        .then(() => log('info', 'Catalogue Service connected to DB'))
         .catch(err => {
-            console.error("Catalogue Service DB ERROR:", err.message);
+            log('error', 'Catalogue Service DB ERROR', { error: err.message });
             process.exit(1); 
         });
 
     app.listen(PORT, () =>
-        console.log(`Catalogue Service running at http://localhost:${PORT}`)
+        log('info', `Catalogue Service running at http://localhost:${PORT}`)
     );
 }
 
