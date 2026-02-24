@@ -303,3 +303,57 @@ spec:
           COMMIT;
           SQL
           psql -h shipping-db -U "$POSTGRES_USER" -d shipping_db -f /tmp/init-shipping.sql;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-payment-db
+  namespace: ecommerce
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: psql
+        image: postgres:14-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: DB_PASSWORD
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Creating payment_db...";
+          psql -h payment-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE payment_db;' || true;
+          echo "Applying payment schema...";
+          cat <<'SQL' > /tmp/init-payment.sql
+          -- Init script for PAYMENT service database
+          -- Creates payment table
+
+          BEGIN;
+
+          -- ==================== PAYMENTS ====================
+
+          CREATE TABLE IF NOT EXISTS payments (
+            id SERIAL PRIMARY KEY,
+            payment_id VARCHAR(255) UNIQUE NOT NULL,
+            order_id BIGINT,
+            provider VARCHAR(255),
+            amount DECIMAL(19,2),
+            status VARCHAR(128),
+            metadata JSONB,
+            date_created TIMESTAMP DEFAULT NOW()
+          );
+
+          COMMIT;
+          SQL
+          psql -h payment-db -U "$POSTGRES_USER" -d payment_db -f /tmp/init-payment.sql;
