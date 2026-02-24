@@ -13,8 +13,6 @@ spec:
       labels:
         app: frontend
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: master-node
       containers:
       - name: frontend
         image: huuhai123/ecommerce-frontend:latest
