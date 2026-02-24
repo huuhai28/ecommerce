@@ -55,11 +55,54 @@ const ordersButton = document.getElementById('btnOrders');
 
  
 function getToken() { return LS.getItem('userToken'); }
+
 function loadCart() {
     const raw = LS.getItem(KEY_CART);
     try { return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
 }
-function saveCart() { LS.setItem(KEY_CART, JSON.stringify(cart)); }
+
+async function loadCartFromServer() {
+    if (!currentUser || !currentUser.id) {
+        return loadCart(); 
+    }
+    try {
+        const response = await fetch(`${window.API_ENDPOINTS.PRODUCTS.LIST.replace('/products', '')}/cart/${currentUser.id}`);
+        if (response.ok) {
+            const data = await response.json();
+            return data || {};
+        }
+    } catch (e) {
+        console.warn('Failed to load cart from server:', e);
+    }
+    return loadCart(); 
+}
+
+async function saveCart() {
+    LS.setItem(KEY_CART, JSON.stringify(cart));
+    
+    if (!currentUser || !currentUser.id) return;
+    
+    try {
+        const cartData = {};
+        Object.entries(cart).forEach(([productId, quantity]) => {
+            const product = products.find(p => p.id == productId);
+            if (product) {
+                cartData[productId] = { quantity, product };
+            }
+        });
+        
+        const response = await fetch(`${window.API_ENDPOINTS.PRODUCTS.LIST.replace('/products', '')}/cart/${currentUser.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cartData)
+        });
+        if (!response.ok) {
+            console.warn('Failed to save cart to server');
+        }
+    } catch (e) {
+        console.warn('Failed to save cart to server:', e);
+    }
+}
 
 function checkTokenAndInitUser() {
     const token = getToken();
@@ -77,9 +120,6 @@ function checkTokenAndInitUser() {
  
 
 async function fetchProducts() {
-    useSampleProductsFallback();
-    return;
-    
     try {
         const response = await fetch(window.API_ENDPOINTS.PRODUCTS.LIST);
         if (response.ok) {
@@ -492,11 +532,15 @@ async function handleOrdersClick(){
 }
 
  
-function init(){
+async function init(){
     checkTokenAndInitUser();
     renderUserArea();
     ensureSampleProductsSeeded();
     fetchProducts();
+    
+    // Load cart from server or localStorage
+    cart = await loadCartFromServer();
+    renderCart();
     
     qInput.oninput = renderProducts;
     catSelect.onchange = renderProducts;
