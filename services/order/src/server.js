@@ -199,7 +199,13 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
     if (!amqpChannel) return;
     const payload = { orderId, customerId, items, totalPrice, status };
     try {
+        // Send to SHIPPING queue
         amqpChannel.sendToQueue(SHIPPING_QUEUE, Buffer.from(JSON.stringify(payload)), { persistent: true });
+        
+        // Send to PAYMENT queue
+        const paymentPayload = { orderId, method: payload.method || 'COD', amount: totalPrice };
+        amqpChannel.sendToQueue('order.payments', Buffer.from(JSON.stringify(paymentPayload)), { persistent: true });
+        
         console.log('Published order event to RabbitMQ:', orderId);
     } catch (err) {
         console.error('Failed to publish to RabbitMQ:', err.message);
