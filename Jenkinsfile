@@ -65,10 +65,11 @@ pipeline {
                                 stage("Build ${svc}") {
                                     def imageName = "${svc}-service"
                                     def k8sName = (svc == 'frontend') ? 'frontend-service' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
+                                    def imageTag = "${BUILD_NUMBER}"
                                     
-                                    sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:latest ./${folderPath}"
-                                    sh "docker push ${DOCKER_HUB_USER}/${imageName}:latest"
-                                    sh "kubectl rollout restart deployment/${k8sName} -n ecommerce"
+                                    sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:${imageTag} ./${folderPath}"
+                                    sh "docker push ${DOCKER_HUB_USER}/${imageName}:${imageTag}"
+                                    sh "kubectl set image deployment/${k8sName} ${k8sName}=${DOCKER_HUB_USER}/${imageName}:${imageTag} -n ecommerce"
                                 }
                             }
                         }
