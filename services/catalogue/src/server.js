@@ -67,10 +67,6 @@ const dbQuery = async (text, params) => {
     }
 };
 
-pool.on('error', (err) => {
-    log('error', 'Unexpected DB error', { error: err.message });
-});
-
 app.get('/health', async (_req, res) => {
     try {
         await dbQuery('SELECT 1');
