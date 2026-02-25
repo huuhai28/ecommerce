@@ -11,8 +11,24 @@ const PORT = process.env.PORT || 3003;
 const JWT_SECRET = process.env.JWT_SECRET; 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672/';
 const SHIPPING_QUEUE = process.env.RABBITMQ_QUEUE || 'shipping.requests';
+const SERVICE_NAME = 'order';
 
 let amqpChannel = null;
+function makeRequestId() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function log(level, message, meta = {}) {
+    const timestamp = new Date().toISOString();
+    const parts = [`${timestamp}`, level, `service=${SERVICE_NAME}`, message];
+    if (meta.requestId) parts.push(`requestId=${meta.requestId}`);
+    if (meta.orderId !== undefined) parts.push(`orderId=${meta.orderId}`);
+    if (meta.status !== undefined) parts.push(`status=${meta.status}`);
+    if (meta.latencyMs !== undefined) parts.push(`latency=${meta.latencyMs}ms`);
+    if (meta.method && meta.path) parts.push(`route=${meta.method} ${meta.path}`);
+    console.log(parts.join(' '));
+}
+
 async function initRabbit() {
     while (!amqpChannel) {
         try {
@@ -20,10 +36,11 @@ async function initRabbit() {
             const ch = await conn.createChannel();
             await ch.assertQueue(SHIPPING_QUEUE, { durable: true });
             amqpChannel = ch;
-            console.log(' Order Service connected to RabbitMQ');
+            log('INFO', 'rabbitmq_connected');
             break;
         } catch (err) {
-            console.warn(' Could not connect to RabbitMQ, retrying in 3s:', err.message);
+            log('WARN', 'rabbitmq_connect_retry');
+            console.warn(err.message);
             amqpChannel = null;
             await new Promise(r => setTimeout(r, 3000));
         }
@@ -31,6 +48,20 @@ async function initRabbit() {
 }
 
 app.use(express.json());
+app.use((req, res, next) => {
+    req.requestId = req.headers['x-request-id'] || makeRequestId();
+    const start = Date.now();
+    res.on('finish', () => {
+        log('INFO', 'http', {
+            requestId: req.requestId,
+            status: res.statusCode,
+            latencyMs: Date.now() - start,
+            method: req.method,
+            path: req.originalUrl,
+        });
+    });
+    next();
+});
 
 const pool = new Pool({
     user: process.env.DB_USER,
@@ -40,11 +71,14 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-app.get('/health', async (_req, res) => {
+app.get('/health', async (req, res) => {
     try {
+        const startDb = Date.now();
         await pool.query('SELECT 1');
+        log('INFO', 'health', { requestId: req.requestId, status: 200, latencyMs: Date.now() - startDb });
         res.json({ status: 'ok', rabbit: Boolean(amqpChannel) });
     } catch (err) {
+        log('ERROR', 'health', { requestId: req.requestId, status: 500 });
         res.status(500).json({ status: 'error', rabbit: Boolean(amqpChannel), error: err.message });
     }
 });
@@ -95,11 +129,12 @@ function normalizeAddress(addr) {
 app.post("/api/orders", protect, async (req, res) => {
     let { items, totalPrice, totalQuantity, billingAddress, shippingAddress, paymentId, paymentMethod } = req.body;
     const customerId = req.customerId;
+    const startReq = Date.now();
 
-    console.log(' Order Request (raw):', { itemsLength: items?.length, totalPrice, totalQuantity, customerId, paymentMethod });
+    log('INFO', 'order_request', { requestId: req.requestId, status: 'start' });
 
     if (!items || items.length === 0) {
-        console.log(' Validation failed: items empty');
+        log('WARN', 'order_validation_failed', { requestId: req.requestId, status: 400 });
         return res.status(400).json({ message: "Giỏ hàng trống." });
     }
     
@@ -108,7 +143,7 @@ app.post("/api/orders", protect, async (req, res) => {
     totalPrice = calculatedTotal;
     totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
     
-    console.log(' Order Request (calculated):', { itemsLength: items.length, totalPrice, totalQuantity, customerId, paymentMethod });
+    log('INFO', 'order_calculated', { requestId: req.requestId, status: 'ok' });
     
     const client = await pool.connect();
     
@@ -162,7 +197,7 @@ app.post("/api/orders", protect, async (req, res) => {
             if (Number.isNaN(productId)) {
                 throw new Error("productId không hợp lệ");
             }
-            console.log(' Insert item', { raw: item.productId, parsed: productId, quantity: item.quantity, unitPrice: item.unitPrice });
+            log('INFO', 'order_item_insert', { requestId: req.requestId, orderId, status: 'pending' });
             
             await client.query(
                 `INSERT INTO order_item(order_id, product_id, quantity, unit_price, image_url)
@@ -176,8 +211,11 @@ app.post("/api/orders", protect, async (req, res) => {
         try { 
             await publishOrderCreated(orderId, customerId, items, totalPrice, 'PENDING'); 
         } catch (e) { 
-            console.error('Warning: Could not publish to RabbitMQ:', e.message);
+            log('WARN', 'rabbitmq_publish_failed', { requestId: req.requestId, orderId });
+            console.error(e);
         }
+
+        log('INFO', 'order_created', { requestId: req.requestId, orderId, status: 'PENDING', latencyMs: Date.now() - startReq });
 
         res.status(201).json({ 
             message: "Tạo đơn hàng thành công",
@@ -188,7 +226,8 @@ app.post("/api/orders", protect, async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error("Lỗi tạo đơn hàng:", err);
+        log('ERROR', 'order_create_error', { requestId: req.requestId, status: 500 });
+        console.error(err);
         res.status(500).json({ message: "Lỗi server trong quá trình xử lý đơn hàng." });
     } finally {
         client.release();
@@ -206,9 +245,10 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
         const paymentPayload = { orderId, method: payload.method || 'COD', amount: totalPrice };
         amqpChannel.sendToQueue('order.payments', Buffer.from(JSON.stringify(paymentPayload)), { persistent: true });
         
-        console.log('Published order event to RabbitMQ:', orderId);
+        log('INFO', 'rabbitmq_published', { orderId, status: 'ok' });
     } catch (err) {
-        console.error('Failed to publish to RabbitMQ:', err.message);
+        log('ERROR', 'rabbitmq_publish_error', { orderId, status: 'failed' });
+        console.error(err);
         throw err;
     }
 }

@@ -8,8 +8,39 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 3001; 
 const JWT_SECRET = process.env.JWT_SECRET; 
+const SERVICE_NAME = 'user';
 
 app.use(express.json());
+
+function makeRequestId() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function log(level, message, meta = {}) {
+    const timestamp = new Date().toISOString();
+    const parts = [`${timestamp}`, level, `service=${SERVICE_NAME}`, message];
+    if (meta.requestId) parts.push(`requestId=${meta.requestId}`);
+    if (meta.userId !== undefined) parts.push(`userId=${meta.userId}`);
+    if (meta.status !== undefined) parts.push(`status=${meta.status}`);
+    if (meta.latencyMs !== undefined) parts.push(`latency=${meta.latencyMs}ms`);
+    if (meta.method && meta.path) parts.push(`route=${meta.method} ${meta.path}`);
+    console.log(parts.join(' '));
+}
+
+app.use((req, res, next) => {
+    req.requestId = req.headers['x-request-id'] || makeRequestId();
+    const start = Date.now();
+    res.on('finish', () => {
+        log('INFO', 'http', {
+            requestId: req.requestId,
+            status: res.statusCode,
+            latencyMs: Date.now() - start,
+            method: req.method,
+            path: req.originalUrl,
+        });
+    });
+    next();
+});
 
 const pool = new Pool({
     user: process.env.DB_USER,
@@ -19,11 +50,14 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-app.get('/health', async (_req, res) => {
+app.get('/health', async (req, res) => {
     try {
+        const startDb = Date.now();
         await pool.query('SELECT 1');
+        log('INFO', 'health', { requestId: req.requestId, status: 200, latencyMs: Date.now() - startDb });
         res.json({ status: 'ok' });
     } catch (err) {
+        log('ERROR', 'health', { requestId: req.requestId, status: 500 });
         res.status(500).json({ status: 'error', error: err.message });
     }
 });
@@ -48,13 +82,16 @@ function protect(req, res, next) {
 
 app.post("/api/register", async (req, res) => {
     try {
-        console.log("Register request received:", req.body);
+        const startReq = Date.now();
         const { email, firstName, lastName, password } = req.body;
+
+        log('INFO', 'register_request', { requestId: req.requestId, status: 'start' });
 
         const safeFirst = (firstName || "").trim();
         const safeLast = (lastName || "").trim() || safeFirst; 
 
         if (!email || !safeFirst || !password) {
+            log('WARN', 'register_validation_failed', { requestId: req.requestId, status: 400 });
             return res.status(400).json({ message: "Thiếu thông tin bắt buộc." });
         }
 
@@ -72,6 +109,7 @@ app.post("/api/register", async (req, res) => {
             { expiresIn: "1d" }
         );
 
+        log('INFO', 'register_success', { requestId: req.requestId, userId: newCustomer.id, status: 201, latencyMs: Date.now() - startReq });
         res.status(201).json({ 
             message: "Đăng ký thành công",
             token,
@@ -85,19 +123,24 @@ app.post("/api/register", async (req, res) => {
 
     } catch (err) {
         if (err.code === "23505") { 
+            log('WARN', 'register_conflict', { requestId: req.requestId, status: 409 });
             return res.status(409).json({ message: "Email đã tồn tại trong hệ thống." });
         }
-        console.error("Lỗi đăng ký:", err.message);
+        log('ERROR', 'register_error', { requestId: req.requestId, status: 500 });
+        console.error(err);
         res.status(500).json({ message: "Lỗi server trong quá trình đăng ký." });
     }
 });
 
 app.post("/api/login", async (req, res) => {
     try {
-        console.log("Login request received:", req.body);
+        const startReq = Date.now();
         const { email, password } = req.body;
 
+        log('INFO', 'login_request', { requestId: req.requestId, status: 'start' });
+
         if (!email || !password) {
+            log('WARN', 'login_validation_failed', { requestId: req.requestId, status: 400 });
             return res.status(400).json({ message: "Email và password là bắt buộc." });
         }
 
@@ -106,14 +149,18 @@ app.post("/api/login", async (req, res) => {
             [email]
         );
 
-        if (result.rows.length === 0)
+        if (result.rows.length === 0) {
+            log('WARN', 'login_failed', { requestId: req.requestId, status: 401 });
             return res.status(401).json({ message: "Email hoặc mật khẩu không chính xác." });
+        }
 
         const customer = result.rows[0];
 
         const ok = await bcrypt.compare(password, customer.password_hash);
-        if (!ok)
+        if (!ok) {
+            log('WARN', 'login_failed', { requestId: req.requestId, status: 401 });
             return res.status(401).json({ message: "Email hoặc mật khẩu không chính xác." });
+        }
 
         const token = jwt.sign(
             { customerId: customer.id },
@@ -121,6 +168,7 @@ app.post("/api/login", async (req, res) => {
             { expiresIn: "1d" }
         );
 
+        log('INFO', 'login_success', { requestId: req.requestId, userId: customer.id, status: 200, latencyMs: Date.now() - startReq });
         res.json({ 
             token, 
             customer: { 
@@ -132,23 +180,28 @@ app.post("/api/login", async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Lỗi đăng nhập:", err.message);
+        log('ERROR', 'login_error', { requestId: req.requestId, status: 500 });
+        console.error(err);
         res.status(500).json({ message: "Lỗi server trong quá trình đăng nhập." });
     }
 });
 
 app.get("/api/customers/:id", protect, async (req, res) => {
     try {
+        const startReq = Date.now();
         const { id } = req.params;
         const result = await pool.query(
             "SELECT id, first_name, last_name, email, date_created FROM customer WHERE id=$1",
             [id]
         );
 
-        if (result.rows.length === 0)
+        if (result.rows.length === 0) {
+            log('WARN', 'customer_not_found', { requestId: req.requestId, userId: id, status: 404, latencyMs: Date.now() - startReq });
             return res.status(404).json({ message: "Không tìm thấy khách hàng." });
+        }
 
         const customer = result.rows[0];
+        log('INFO', 'customer_found', { requestId: req.requestId, userId: customer.id, status: 200, latencyMs: Date.now() - startReq });
         res.json({ 
             id: customer.id, 
             firstName: customer.first_name, 
@@ -157,7 +210,8 @@ app.get("/api/customers/:id", protect, async (req, res) => {
             dateCreated: customer.date_created
         });
     } catch (err) {
-        console.error("Lỗi lấy customer:", err.message);
+        log('ERROR', 'customer_fetch_error', { requestId: req.requestId, status: 500 });
+        console.error(err);
         res.status(500).json({ message: "Lỗi server." });
     }
 });
@@ -166,14 +220,15 @@ app.get("/api/customers/:id", protect, async (req, res) => {
 
 if (process.env.NODE_ENV !== 'test') {
     pool.connect()
-        .then(() => console.log(`User Service connected to DB`))
+        .then(() => log('INFO', 'db_connected'))
         .catch(err => {
-            console.error("User Service DB ERROR:", err.message);
+            log('ERROR', 'db_connection_error', { status: 'failed' });
+            console.error(err);
             process.exit(1); 
         });
 
     app.listen(PORT, () =>
-        console.log(`User Service running at http://localhost:${PORT}`)
+        log('INFO', `server_listening port=${PORT}`)
     );
 }
 

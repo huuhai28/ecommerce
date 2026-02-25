@@ -4,16 +4,38 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3006;
+const SERVICE_NAME = 'cart';
 
 app.use(express.json());
 
-// Request logging middleware with operation details
+function makeRequestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function log(level, message, meta = {}) {
+  const timestamp = new Date().toISOString();
+  const parts = [`${timestamp}`, level, `service=${SERVICE_NAME}`, message];
+  if (meta.requestId) parts.push(`requestId=${meta.requestId}`);
+  if (meta.userId) parts.push(`userId=${meta.userId}`);
+  if (meta.status !== undefined) parts.push(`status=${meta.status}`);
+  if (meta.latencyMs !== undefined) parts.push(`latency=${meta.latencyMs}ms`);
+  if (meta.method && meta.path) parts.push(`route=${meta.method} ${meta.path}`);
+  console.log(parts.join(' '));
+}
+
 app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    res.on('finish', () => {
-        console.log(`[${timestamp}] ${req.method} ${req.url} - Status: ${res.statusCode} - IP: ${req.ip}`);
+  req.requestId = req.headers['x-request-id'] || makeRequestId();
+  const start = Date.now();
+  res.on('finish', () => {
+    log('INFO', 'http', {
+      requestId: req.requestId,
+      status: res.statusCode,
+      latencyMs: Date.now() - start,
+      method: req.method,
+      path: req.originalUrl,
     });
-    next();
+  });
+  next();
 });
 
 const pool = new Pool({
@@ -35,32 +57,33 @@ async function ensureTable() {
 }
 
 app.get('/health', async (_req, res) => {
-  const timestamp = new Date().toISOString();
   try {
+    const startDb = Date.now();
     const result = await pool.query('SELECT count(*) FROM carts');
     const cartCount = Number(result.rows[0].count);
-    console.log(`[${timestamp}] [HEALTH CHECK] Status OK - Total carts: ${cartCount}`);
+    log('INFO', 'health', { status: 200, latencyMs: Date.now() - startDb });
     res.json({ status: 'ok', carts: cartCount });
   } catch (err) {
-    console.error(`[${timestamp}] [HEALTH CHECK] Status ERROR: ${err.message}`);
+    log('ERROR', 'health', { status: 500 });
     res.status(500).json({ status: 'error', error: err.message });
   }
 });
 
 app.get('/api/cart/:user', async (req, res) => {
   const u = req.params.user;
-  const timestamp = new Date().toISOString();
   try {
+    const startDb = Date.now();
     const result = await pool.query('SELECT payload FROM carts WHERE user_id=$1', [u]);
+    const dbTime = Date.now() - startDb;
     if (result.rows.length === 0) {
-      console.log(`[${timestamp}] [GET CART] User ${u} - Result: EMPTY`);
+      log('INFO', 'cart_empty', { requestId: req.requestId, userId: u, status: 200, latencyMs: dbTime });
       return res.json({});
     }
     const itemCount = result.rows[0].payload ? Object.keys(result.rows[0].payload).length : 0;
-    console.log(`[${timestamp}] [GET CART] User ${u} - Retrieved ${itemCount} items`);
+    log('INFO', `cart_loaded items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: dbTime });
     res.json(result.rows[0].payload || {});
   } catch (err) {
-    console.error(`[${timestamp}] [GET CART] User ${u} - ERROR: ${err.message}`);
+    log('ERROR', 'cart_load_error', { requestId: req.requestId, userId: u, status: 500 });
     res.status(500).json({ message: 'Failed to load cart', error: err.message });
   }
 });
@@ -68,35 +91,35 @@ app.get('/api/cart/:user', async (req, res) => {
 app.post('/api/cart/:user', async (req, res) => {
   const u = req.params.user;
   const payload = req.body || {};
-  const timestamp = new Date().toISOString();
   const itemCount = Object.keys(payload).length;
   
   try {
+    const startDb = Date.now();
     await pool.query(
       `INSERT INTO carts(user_id, payload, updated_at) VALUES($1,$2,NOW())
        ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()` ,
       [u, payload]
     );
-    console.log(`[${timestamp}] [POST CART] User ${u} - Saved ${itemCount} items - Body: ${JSON.stringify(payload)}`);
+    log('INFO', `cart_saved items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: Date.now() - startDb });
     res.json({ ok: true });
   } catch (err) {
-    console.error(`[${timestamp}] [POST CART] User ${u} - ERROR: ${err.message}`);
+    log('ERROR', 'cart_save_error', { requestId: req.requestId, userId: u, status: 500 });
     res.status(500).json({ message: 'Failed to save cart', error: err.message });
   }
 });
 
 app.delete('/api/cart/:user', async (req, res) => {
   const u = req.params.user;
-  const timestamp = new Date().toISOString();
   try {
+    const startDb = Date.now();
     const checkResult = await pool.query('SELECT payload FROM carts WHERE user_id=$1', [u]);
     const itemCount = checkResult.rows.length > 0 ? Object.keys(checkResult.rows[0].payload || {}).length : 0;
     
     await pool.query('DELETE FROM carts WHERE user_id=$1', [u]);
-    console.log(`[${timestamp}] [DELETE CART] User ${u} - Deleted ${itemCount} items`);
+    log('INFO', `cart_deleted items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: Date.now() - startDb });
     res.json({ ok: true });
   } catch (err) {
-    console.error(`[${timestamp}] [DELETE CART] User ${u} - ERROR: ${err.message}`);
+    log('ERROR', 'cart_delete_error', { requestId: req.requestId, userId: u, status: 500 });
     res.status(500).json({ message: 'Failed to delete cart', error: err.message });
   }
 });
@@ -104,20 +127,20 @@ app.delete('/api/cart/:user', async (req, res) => {
 async function start() {
   try {
     await ensureTable();
-    console.log(`[${new Date().toISOString()}] [STARTUP] Database table ensured`);
+    log('INFO', 'db_table_ready');
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] [STARTUP] Failed to ensure table: ${err.message}`);
+    log('ERROR', 'db_table_error', { status: 'failed' });
     process.exit(1);
   }
   
   app.listen(PORT, () => {
-    console.log(`[${new Date().toISOString()}] [STARTUP] Cart Service running on port ${PORT}`);
+    log('INFO', `server_listening port=${PORT}`);
   });
 }
 
 if (process.env.NODE_ENV !== 'test') {
   start().catch(err => {
-    console.error(`[${new Date().toISOString()}] [STARTUP] Cart service failed to start: ${err.message}`);
+    log('ERROR', 'startup_failed', { status: 'failed' });
     process.exit(1);
   });
 }
