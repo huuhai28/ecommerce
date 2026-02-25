@@ -64,12 +64,13 @@ pipeline {
                             jobs[svc] = {
                                 stage("Build ${svc}") {
                                     def imageName = "${svc}-service"
-                                    def k8sName = (svc == 'frontend') ? 'frontend-service' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
+                                    def deploymentName = (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
+                                    def containerName = (svc == 'frontend') ? 'frontend' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                                     def imageTag = "${BUILD_NUMBER}"
                                     
                                     sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:${imageTag} ./${folderPath}"
                                     sh "docker push ${DOCKER_HUB_USER}/${imageName}:${imageTag}"
-                                    sh "kubectl set image deployment/${k8sName} ${k8sName}=${DOCKER_HUB_USER}/${imageName}:${imageTag} -n ecommerce"
+                                    sh "kubectl set image deployment/${deploymentName} ${containerName}=${DOCKER_HUB_USER}/${imageName}:${imageTag} -n ecommerce"
                                 }
                             }
                         }
