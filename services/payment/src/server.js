@@ -94,7 +94,7 @@ async function startRabbitMQ() {
         });
         
         const result = await pool.query(
-          'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6, NOW()) RETURNING id, payment_id, status',
+          'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, payment_id, status',
           [paymentId, payload.orderId, payload.method || 'COD', payload.amount, 'completed', JSON.stringify({ method: payload.method })]
         );
         
@@ -201,7 +201,7 @@ app.post('/api/payments', async (req, res) => {
     });
     
     const result = await pool.query(
-      'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6, NOW()) RETURNING id, payment_id, status',
+      'INSERT INTO payments(payment_id, order_id, provider, amount, status, metadata) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, payment_id, status',
       [paymentId, orderId, method || 'COD', amount, 'completed', JSON.stringify({ method })]
     );
     
