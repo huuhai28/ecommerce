@@ -85,7 +85,15 @@ pipeline {
         }
         stage('Smoke Test') {
             steps {
-                sleep 120
+                script {
+                    echo "Waiting for deployments to be ready..."
+                    def targetServices = (params.SERVICE == 'all') ? env.LIST_SERVICES.split(' ') : [params.SERVICE]
+                    targetServices.each { svc ->
+                        def deploymentName = (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
+                        sh "kubectl rollout status deployment/${deploymentName} -n ecommerce --timeout=5m || true"
+                    }
+                    sleep 30
+                }
                 sh 'chmod +x tests/e2e-smoke.sh'
                 sh '''
                     GATEWAY_HOST=${GATEWAY_HOST} GATEWAY_PORT=${GATEWAY_PORT} EMAIL=e2e-${BUILD_NUMBER}@test.com tests/e2e-smoke.sh || {
