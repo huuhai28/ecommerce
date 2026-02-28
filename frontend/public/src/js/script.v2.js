@@ -69,10 +69,9 @@ async function loadCartFromServer() {
         const response = await fetch(`${window.API_ENDPOINTS.PRODUCTS.LIST.replace('/products', '')}/cart/${currentUser.id}`);
         if (response.ok) {
             const data = await response.json();
-            // Convert server format {pid: {quantity, product}} to local format {pid: quantity}
             const localCart = {};
             Object.entries(data || {}).forEach(([pid, item]) => {
-                localCart[pid] = item.quantity || item; // Handle both formats
+                localCart[pid] = item.quantity || item; 
             });
             return localCart;
         }
