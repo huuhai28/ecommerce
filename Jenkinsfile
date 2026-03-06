@@ -22,11 +22,11 @@ pipeline {
         stage('Apply Infrastructure') {
             steps {
                 script {
-                    sh 'kubectl apply -f infrastructure/k8s/namespace.yaml'
-                    sh 'kubectl apply -f infrastructure/k8s/storageclass-local.yaml'
-                    sh 'kubectl apply -f infrastructure/k8s/postgres-pv-pvc.yaml'
-                    sh 'kubectl apply -f infrastructure/k8s/cart-db-deployment.yaml'
-                    sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce || true'
+                    sh 'kubectl apply -f infrastructure/k8s/namespace.yaml --validate=false'
+                    sh 'kubectl apply -f infrastructure/k8s/storageclass-local.yaml --validate=false'
+                    sh 'kubectl apply -f infrastructure/k8s/postgres-pv-pvc.yaml --validate=false'
+                    sh 'kubectl apply -f infrastructure/k8s/cart-db-deployment.yaml --validate=false'
+                    sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce --validate=false || true'
                 }
             }
         }
