@@ -5,7 +5,6 @@ GATEWAY_HOST=${GATEWAY_HOST:-192.168.1.111}
 GATEWAY_PORT=${GATEWAY_PORT:-30004}
 BASE="http://${GATEWAY_HOST}:${GATEWAY_PORT}"
 
-# Wait for gateway to be ready
 echo "[E2E] Waiting for gateway to be ready..."
 for i in {1..30}; do
   if curl -sf "${BASE}/health" -o /dev/null 2>&1; then

@@ -542,7 +542,6 @@ async function init(){
     ensureSampleProductsSeeded();
     fetchProducts();
     
-    // Load cart from server or localStorage
     cart = await loadCartFromServer();
     renderCart();
     

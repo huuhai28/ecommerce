@@ -5,13 +5,7 @@ metadata:
   namespace: ecommerce
 data:
   init-user.sql: |
-    -- Init script for USER service database
-    -- Creates customer and address tables
-    
     BEGIN;
-    
-    -- ==================== CUSTOMER & ADDRESS ====================
-    
     CREATE TABLE IF NOT EXISTS customer (
       id SERIAL PRIMARY KEY,
       first_name VARCHAR(255) NOT NULL,
