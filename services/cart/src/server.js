@@ -59,10 +59,9 @@ async function ensureTable() {
 app.get('/health', async (_req, res) => {
   try {
     const startDb = Date.now();
-    const result = await pool.query('SELECT count(*) FROM carts');
-    const cartCount = Number(result.rows[0].count);
+    await pool.query('SELECT 1');
     log('INFO', 'health', { status: 200, latencyMs: Date.now() - startDb });
-    res.json({ status: 'ok', carts: cartCount });
+    res.json({ status: 'ok' });
   } catch (err) {
     log('ERROR', 'health', { status: 500 });
     res.status(500).json({ status: 'error', error: err.message });
@@ -129,8 +128,8 @@ async function start() {
     await ensureTable();
     log('INFO', 'db_table_ready');
   } catch (err) {
-    log('ERROR', 'db_table_error', { status: 'failed' });
-    process.exit(1);
+    log('WARN', 'db_table_creation_error', { error: err.message });
+    // Don't exit, table might be created later or already exists
   }
   
   app.listen(PORT, () => {
@@ -140,7 +139,7 @@ async function start() {
 
 if (process.env.NODE_ENV !== 'test') {
   start().catch(err => {
-    log('ERROR', 'startup_failed', { status: 'failed' });
+    log('ERROR', 'startup_failed', { error: err.message });
     process.exit(1);
   });
 }

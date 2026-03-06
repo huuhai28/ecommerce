@@ -201,7 +201,7 @@ if (process.env.NODE_ENV !== 'test') {
         .then(() => log('info', 'db_connected'))
         .catch(err => {
             log('error', 'db_connection_error', { error: err.message });
-            process.exit(1); 
+            // Don't exit - let /health endpoint handle retries via startupProbe
         });
 
     app.listen(PORT, () =>

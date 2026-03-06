@@ -357,11 +357,12 @@ app.get("/api/orders/:id", protect, async (req, res) => {
 
 
 if (process.env.NODE_ENV !== 'test') {
+    // Don't block startup on DB connection - let health probe retry
     pool.connect()
         .then(() => console.log(` Order Service connected to DB`))
         .catch(err => {
             console.error(" Order Service DB ERROR:", err.message);
-            process.exit(1); 
+            // Don't exit - let /health endpoint handle retries via startupProbe
         });
 
     initRabbit().catch(() => {});

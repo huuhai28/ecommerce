@@ -159,7 +159,7 @@ if (process.env.NODE_ENV !== 'test') {
   start().catch(err => { 
     log('ERROR', 'startup_failed', { status: 'failed' });
     console.error(err);
-    process.exit(1); 
+    // Don't exit - let /health endpoint handle retries via startupProbe
   });
   module.exports = { start, server };
 } else {
