@@ -49,6 +49,24 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await pool.query('SELECT 1');
+      log('INFO', 'db_connected', {});
+      return true;
+    } catch (err) {
+      if (i < maxRetries - 1) {
+        log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        log('ERROR', 'db_connection_failed', { error: err.message });
+        throw err;
+      }
+    }
+  }
+};
+
 async function startRabbitMQ() {
   try {
     const conn = await amqp.connect(RABBITMQ_URL);
@@ -246,8 +264,16 @@ app.post('/api/payments', async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => log('INFO', `server_listening port=${PORT}`));
-  startRabbitMQ();
+  (async () => {
+    try {
+      await waitForDB();
+      app.listen(PORT, () => log('INFO', `server_listening port=${PORT}`));
+      startRabbitMQ();
+    } catch (err) {
+      log('ERROR', 'startup_failed', { error: err.message });
+      process.exit(1);
+    }
+  })();
 }
 
 module.exports = app;

@@ -44,7 +44,27 @@ const pool = new Pool({
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
 });
+
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await pool.query('SELECT 1');
+      log('INFO', 'db_connected', {});
+      return true;
+    } catch (err) {
+      if (i < maxRetries - 1) {
+        log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        log('ERROR', 'db_connection_failed', { error: err.message });
+        throw err;
+      }
+    }
+  }
+};
 
 async function ensureTable() {
   await pool.query(`
@@ -125,11 +145,12 @@ app.delete('/api/cart/:user', async (req, res) => {
 
 async function start() {
   try {
+    await waitForDB();
     await ensureTable();
     log('INFO', 'db_table_ready');
   } catch (err) {
-    log('WARN', 'db_table_creation_error', { error: err.message });
-    // Don't exit, table might be created later or already exists
+    log('ERROR', 'startup_error', { error: err.message });
+    throw err;
   }
   
   app.listen(PORT, () => {

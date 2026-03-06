@@ -356,20 +356,37 @@ app.get("/api/orders/:id", protect, async (req, res) => {
 
 
 
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await pool.query('SELECT 1');
+      log('INFO', 'db_connected', {});
+      return true;
+    } catch (err) {
+      if (i < maxRetries - 1) {
+        log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        log('ERROR', 'db_connection_failed', { error: err.message });
+        throw err;
+      }
+    }
+  }
+};
+
 if (process.env.NODE_ENV !== 'test') {
-    // Don't block startup on DB connection - let health probe retry
-    pool.connect()
-        .then(() => console.log(` Order Service connected to DB`))
-        .catch(err => {
-            console.error(" Order Service DB ERROR:", err.message);
-            // Don't exit - let /health endpoint handle retries via startupProbe
-        });
-
-    initRabbit().catch(() => {});
-
-    app.listen(PORT, () =>
-        console.log(` Order Service running at http://localhost:${PORT}`)
-    );
+    (async () => {
+      try {
+        await waitForDB();
+        await initRabbit();
+        app.listen(PORT, () =>
+          log('INFO', `server_listening port=${PORT}`)
+        );
+      } catch (err) {
+        log('ERROR', 'startup_failed', { error: err.message });
+        process.exit(1);
+      }
+    })();
 }
 
 module.exports = app;

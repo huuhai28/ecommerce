@@ -53,7 +53,28 @@ const pool = new Pool({
     database: process.env.DB_DATABASE,
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
+    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 30000,
 });
+
+// Retry logic for database connection
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await pool.query('SELECT 1');
+            log('info', 'db_connected', {});
+            return true;
+        } catch (err) {
+            if (i < maxRetries - 1) {
+                log('warn', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            } else {
+                log('error', 'db_connection_failed', { error: err.message });
+                throw err;
+            }
+        }
+    }
+};
 
 const dbQuery = async (text, params) => {
     const startedAt = Date.now();
@@ -197,16 +218,16 @@ app.get("/api/categories", async (req, res) => {
 
 
 if (process.env.NODE_ENV !== 'test') {
-    pool.connect()
-        .then(() => log('info', 'db_connected'))
+    waitForDB()
+        .then(() => {
+            app.listen(PORT, () =>
+                log('info', `server_listening port=${PORT}`)
+            );
+        })
         .catch(err => {
-            log('error', 'db_connection_error', { error: err.message });
-            // Don't exit - let /health endpoint handle retries via startupProbe
+            log('error', 'startup_failed', { error: err.message });
+            process.exit(1);
         });
-
-    app.listen(PORT, () =>
-        log('info', `server_listening port=${PORT}`)
-    );
 }
 
 module.exports = app;

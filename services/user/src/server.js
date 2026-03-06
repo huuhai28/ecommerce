@@ -48,7 +48,28 @@ const pool = new Pool({
     database: process.env.DB_DATABASE,
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
+    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 30000,
 });
+
+// Retry logic for database connection
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await pool.query('SELECT 1');
+            log('INFO', 'db_connected', {});
+            return true;
+        } catch (err) {
+            if (i < maxRetries - 1) {
+                log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            } else {
+                log('ERROR', 'db_connection_failed', { error: err.message });
+                throw err;
+            }
+        }
+    }
+};
 
 app.get('/health', async (req, res) => {
     try {
@@ -218,18 +239,36 @@ app.get("/api/customers/:id", protect, async (req, res) => {
 
 
 
-if (process.env.NODE_ENV !== 'test') {
-    pool.connect()
-        .then(() => log('INFO', 'db_connected'))
-        .catch(err => {
-            log('ERROR', 'db_connection_error', { status: 'failed' });
-            console.error(err);
-            // Don't exit - let /health endpoint handle retries via startupProbe
-        });
+const waitForDBUser = async (maxRetries = 30, delayMs = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await pool.query('SELECT 1');
+            log('INFO', 'db_connected', {});
+            return true;
+        } catch (err) {
+            if (i < maxRetries - 1) {
+                log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            } else {
+                log('ERROR', 'db_connection_failed', { error: err.message });
+                throw err;
+            }
+        }
+    }
+};
 
-    app.listen(PORT, () =>
-        log('INFO', `server_listening port=${PORT}`)
-    );
+if (process.env.NODE_ENV !== 'test') {
+    (async () => {
+      try {
+        await waitForDBUser();
+        app.listen(PORT, () =>
+            log('INFO', `server_listening port=${PORT}`)
+        );
+      } catch (err) {
+        log('ERROR', 'startup_failed', { error: err.message });
+        process.exit(1);
+      }
+    })();
 }
 
 module.exports = app;

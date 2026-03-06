@@ -56,6 +56,24 @@ log('INFO', `config queue=${QUEUE}`);
 log('INFO', `config db_host=${process.env.DB_HOST}`);
 log('INFO', `config db_name=${process.env.DB_DATABASE}`);
 
+const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await pool.query('SELECT 1');
+      log('INFO', 'db_connected', {});
+      return true;
+    } catch (err) {
+      if (i < maxRetries - 1) {
+        log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        log('ERROR', 'db_connection_failed', { error: err.message });
+        throw err;
+      }
+    }
+  }
+};
+
 async function ensureTable(){
   log('INFO', 'db_check_table');
   await pool.query(`CREATE TABLE IF NOT EXISTS shipping (
@@ -151,17 +169,26 @@ app.get('/api/shipping/:orderId', async (req, res) => {
 app.use((req, res) => res.status(404).end());
 
 if (process.env.NODE_ENV !== 'test') {
-  log('INFO', 'server_start');
-  const server = app.listen(PORT, () => {
-    log('INFO', `server_listening port=${PORT}`);
-    log('INFO', 'server_ready');
-  });
-  start().catch(err => { 
-    log('ERROR', 'startup_failed', { status: 'failed' });
-    console.error(err);
-    // Don't exit - let /health endpoint handle retries via startupProbe
-  });
-  module.exports = { start, server };
+  (async () => {
+    try {
+      await waitForDB();
+      log('INFO', 'server_start');
+      const server = app.listen(PORT, () => {
+        log('INFO', `server_listening port=${PORT}`);
+        log('INFO', 'server_ready');
+      });
+      start().catch(err => { 
+        log('ERROR', 'startup_failed', { status: 'failed' });
+        console.error(err);
+        process.exit(1);
+      });
+      module.exports = { start, server };
+    } catch (err) {
+      log('ERROR', 'startup_failed', { status: 'failed' });
+      console.error(err);
+      process.exit(1);
+    }
+  })();
 } else {
   module.exports = { start };
 }
