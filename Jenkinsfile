@@ -63,7 +63,7 @@ pipeline {
                         if (params.SERVICE != 'all' || params.SERVICE == 'all') {
                             jobs[svc] = {
                                 stage("Build ${svc}") {
-                                    def imageName = "${svc}-service"
+                                    def imageName = (svc == 'frontend') ? 'ecommerce-frontend' : (svc == 'gateway') ? 'ecommerce-gateway' : "${svc}-service"
                                     def deploymentName = (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                                     def containerName = (svc == 'frontend') ? 'frontend' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                                     def imageTag = "${BUILD_NUMBER}"
