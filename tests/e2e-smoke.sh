@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GATEWAY_HOST=${GATEWAY_HOST:-192.168.1.111}
+GATEWAY_HOST=${GATEWAY_HOST:-k8s.huuhai.dev}
 GATEWAY_PORT=${GATEWAY_PORT:-30004}
 BASE="http://${GATEWAY_HOST}:${GATEWAY_PORT}"
 

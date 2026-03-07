@@ -17,6 +17,8 @@ spec:
       labels:
         app: order-service
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: order-service
         image: huuhai123/order-service:latest

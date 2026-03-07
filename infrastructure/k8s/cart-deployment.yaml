@@ -17,6 +17,8 @@ spec:
       labels:
         app: cart-service
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: cart-service
         image: huuhai123/cart-service:latest

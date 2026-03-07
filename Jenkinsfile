@@ -7,8 +7,8 @@ pipeline {
     environment {
         DOCKER_HUB_USER = 'huuhai123'
         LIST_SERVICES = 'frontend gateway cart catalogue order payment shipping user'
-        GATEWAY_HOST = '192.168.1.111'
-        GATEWAY_PORT = '30004'
+        GATEWAY_HOST = 'k8s.huuhai.dev'
+        GATEWAY_PORT = '80'
     }
     stages {
         stage('Checkout Code') {
@@ -68,8 +68,9 @@ pipeline {
                                     def containerName = (svc == 'frontend') ? 'frontend' : (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                                     def imageTag = "${BUILD_NUMBER}"
                                     
-                                    sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:${imageTag} ./${folderPath}"
+                                    sh "docker build -t ${DOCKER_HUB_USER}/${imageName}:${imageTag} -t ${DOCKER_HUB_USER}/${imageName}:latest ./${folderPath}"
                                     sh "docker push ${DOCKER_HUB_USER}/${imageName}:${imageTag}"
+                                    sh "docker push ${DOCKER_HUB_USER}/${imageName}:latest"
                                     sh "kubectl set image deployment/${deploymentName} ${containerName}=${DOCKER_HUB_USER}/${imageName}:${imageTag} -n ecommerce"
                                 }
                             }
