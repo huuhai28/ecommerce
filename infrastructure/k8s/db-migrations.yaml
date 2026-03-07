@@ -7,6 +7,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: psql
         image: postgres:14-alpine
@@ -26,6 +28,7 @@ spec:
         - -c
         - |
           set -e
+          echo "Waiting for DNS..."; until nslookup user-db > /dev/null 2>&1; do sleep 3; done;
           echo "Creating user_db...";
           psql -h user-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE user_db;' || true;
           echo "Applying user schema...";
@@ -62,6 +65,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: psql
         image: postgres:14-alpine
@@ -81,6 +86,7 @@ spec:
         - -c
         - |
           set -e
+          echo "Waiting for DNS..."; until nslookup order-db > /dev/null 2>&1; do sleep 3; done;
           echo "Creating order_db...";
           psql -h order-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE order_db;' || true;
           echo "Applying order schema...";
@@ -127,6 +133,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: psql
         image: postgres:14-alpine
@@ -146,6 +154,7 @@ spec:
         - -c
         - |
           set -e
+          echo "Waiting for DNS..."; until nslookup catalogue-db > /dev/null 2>&1; do sleep 3; done;
           echo "Creating catalogue_db...";
           psql -h catalogue-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE catalogue_db;' || true;
           echo "Applying catalogue schema...";
@@ -259,6 +268,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: psql
         image: postgres:14-alpine
@@ -313,6 +324,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: worker-node
       containers:
       - name: psql
         image: postgres:14-alpine
@@ -332,6 +345,7 @@ spec:
         - -c
         - |
           set -e
+          echo "Waiting for DNS..."; until nslookup payment-db > /dev/null 2>&1; do sleep 3; done;
           echo "Creating payment_db...";
           psql -h payment-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE payment_db;' || true;
           echo "Applying payment schema...";
