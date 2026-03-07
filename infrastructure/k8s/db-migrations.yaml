@@ -28,7 +28,7 @@ spec:
         - -c
         - |
           set -e
-          echo "Waiting for DNS..."; until nslookup user-db > /dev/null 2>&1; do sleep 3; done;
+          echo "Waiting for user-db..."; until pg_isready -h user-db -U "$POSTGRES_USER"; do sleep 3; done;
           echo "Creating user_db...";
           psql -h user-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE user_db;' || true;
           echo "Applying user schema...";
@@ -86,7 +86,7 @@ spec:
         - -c
         - |
           set -e
-          echo "Waiting for DNS..."; until nslookup order-db > /dev/null 2>&1; do sleep 3; done;
+          echo "Waiting for order-db..."; until pg_isready -h order-db -U "$POSTGRES_USER"; do sleep 3; done;
           echo "Creating order_db...";
           psql -h order-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE order_db;' || true;
           echo "Applying order schema...";
@@ -154,7 +154,7 @@ spec:
         - -c
         - |
           set -e
-          echo "Waiting for DNS..."; until nslookup catalogue-db > /dev/null 2>&1; do sleep 3; done;
+          echo "Waiting for catalogue-db..."; until pg_isready -h catalogue-db -U "$POSTGRES_USER"; do sleep 3; done;
           echo "Creating catalogue_db...";
           psql -h catalogue-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE catalogue_db;' || true;
           echo "Applying catalogue schema...";
@@ -289,6 +289,7 @@ spec:
         - -c
         - |
           set -e
+          echo "Waiting for shipping-db..."; until pg_isready -h shipping-db -U "$POSTGRES_USER"; do sleep 3; done;
           echo "Creating shipping_db...";
           psql -h shipping-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE shipping_db;' || true;
           echo "Applying shipping schema...";
@@ -345,7 +346,7 @@ spec:
         - -c
         - |
           set -e
-          echo "Waiting for DNS..."; until nslookup payment-db > /dev/null 2>&1; do sleep 3; done;
+          echo "Waiting for payment-db..."; until pg_isready -h payment-db -U "$POSTGRES_USER"; do sleep 3; done;
           echo "Creating payment_db...";
           psql -h payment-db -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE payment_db;' || true;
           echo "Applying payment schema...";
