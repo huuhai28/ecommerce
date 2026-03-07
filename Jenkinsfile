@@ -7,8 +7,8 @@ pipeline {
     environment {
         DOCKER_HUB_USER = 'huuhai123'
         LIST_SERVICES = 'frontend gateway cart catalogue order payment shipping user'
-        GATEWAY_HOST = 'k8s.huuhai.dev'
-        GATEWAY_PORT = '80'
+        GATEWAY_HOST = '100.104.151.90'
+        GATEWAY_PORT = '30004'
     }
     stages {
         stage('Checkout Code') {
