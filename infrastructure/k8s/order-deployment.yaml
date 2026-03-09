@@ -19,6 +19,10 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: worker-node
+      initContainers:
+      - name: wait-for-db
+        image: postgres:14-alpine
+        command: ['sh', '-c', 'until pg_isready -h order-db -p 5432; do echo waiting for order-db; sleep 2; done']
       containers:
       - name: order-service
         image: huuhai123/order-service:latest

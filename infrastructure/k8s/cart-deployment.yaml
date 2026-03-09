@@ -19,6 +19,10 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: worker-node
+      initContainers:
+      - name: wait-for-db
+        image: postgres:14-alpine
+        command: ['sh', '-c', 'until pg_isready -h cart-db -p 5432; do echo waiting for cart-db; sleep 2; done']
       containers:
       - name: cart-service
         image: huuhai123/cart-service:latest
