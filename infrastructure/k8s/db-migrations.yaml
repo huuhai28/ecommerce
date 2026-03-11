@@ -4,6 +4,7 @@ metadata:
   name: migrate-user-db
   namespace: ecommerce
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     spec:
       restartPolicy: OnFailure
@@ -62,6 +63,7 @@ metadata:
   name: migrate-order-db
   namespace: ecommerce
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     spec:
       restartPolicy: OnFailure
@@ -130,6 +132,7 @@ metadata:
   name: migrate-catalogue-db
   namespace: ecommerce
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     spec:
       restartPolicy: OnFailure
@@ -265,6 +268,7 @@ metadata:
   name: migrate-shipping-db
   namespace: ecommerce
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     spec:
       restartPolicy: OnFailure
@@ -322,6 +326,7 @@ metadata:
   name: migrate-payment-db
   namespace: ecommerce
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     spec:
       restartPolicy: OnFailure

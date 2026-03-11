@@ -27,7 +27,6 @@ pipeline {
                     sh 'kubectl apply -f infrastructure/k8s/postgres-pv-pvc.yaml --validate=false'
                     sh 'kubectl apply -f infrastructure/k8s/cart-db-deployment.yaml --validate=false'
                     sh 'kubectl apply -f infrastructure/k8s/ -n ecommerce --validate=false || true'
-                    // Re-run DB migrations mỗi lần deploy
                     sh 'kubectl delete -f infrastructure/k8s/db-migrations.yaml -n ecommerce --ignore-not-found=true'
                     sh 'sleep 5'
                     sh 'kubectl apply -f infrastructure/k8s/db-migrations.yaml -n ecommerce --validate=false'
