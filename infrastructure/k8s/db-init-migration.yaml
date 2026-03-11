@@ -264,7 +264,7 @@ spec:
       - name: db-migration
         image: postgres:14-alpine
         imagePullPolicy: IfNotPresent
-        command: ["/bin/sh", "/scripts/init-all-dbs.sh"]
+        command: ["/bin/bash", "/scripts/init-all-dbs.sh"]
         env:
         - name: POSTGRES_USER
           valueFrom:
