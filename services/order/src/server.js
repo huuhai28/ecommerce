@@ -39,8 +39,7 @@ async function initRabbit() {
             log('INFO', 'rabbitmq_connected');
             break;
         } catch (err) {
-            log('WARN', 'rabbitmq_connect_retry');
-            console.warn(err.message);
+            log('WARN', 'rabbitmq_connect_retry', { error: err.message });
             amqpChannel = null;
             await new Promise(r => setTimeout(r, 3000));
         }
@@ -212,7 +211,6 @@ app.post("/api/orders", protect, async (req, res) => {
             await publishOrderCreated(orderId, customerId, items, totalPrice, 'PENDING'); 
         } catch (e) { 
             log('WARN', 'rabbitmq_publish_failed', { requestId: req.requestId, orderId });
-            console.error(e);
         }
 
         log('INFO', 'order_created', { requestId: req.requestId, orderId, status: 'PENDING', latencyMs: Date.now() - startReq });
@@ -226,8 +224,7 @@ app.post("/api/orders", protect, async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        log('ERROR', 'order_create_error', { requestId: req.requestId, status: 500 });
-        console.error(err);
+        log('ERROR', 'order_create_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server trong quá trình xử lý đơn hàng." });
     } finally {
         client.release();
@@ -247,8 +244,7 @@ async function publishOrderCreated(orderId, customerId, items, totalPrice, statu
         
         log('INFO', 'rabbitmq_published', { orderId, status: 'ok' });
     } catch (err) {
-        log('ERROR', 'rabbitmq_publish_error', { orderId, status: 'failed' });
-        console.error(err);
+        log('ERROR', 'rabbitmq_publish_error', { orderId, status: 'failed', error: err.message });
         throw err;
     }
 }
@@ -299,7 +295,7 @@ app.get("/api/orders/me", protect, async (req, res) => {
         res.json(ordersWithItems);
 
     } catch (err) {
-        console.error("Lỗi lấy đơn hàng:", err.message);
+        log('ERROR', 'orders_list_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server khi lấy đơn hàng." });
     }
 });
@@ -349,7 +345,7 @@ app.get("/api/orders/:id", protect, async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Lỗi lấy đơn hàng:", err.message);
+        log('ERROR', 'order_fetch_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server." });
     }
 });

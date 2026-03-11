@@ -132,27 +132,6 @@ body {
   font-weight: bold;
 }
 
-#userArea button {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 300;
-  font-size: 14px;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
-  min-width: 100px;
-  height: 40px;
-}
-
-#userArea button:hover {
-  background: #3d8976;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
-}
-
 .hero {
   display: flex;
   align-items: center;
@@ -183,42 +162,55 @@ body {
   font-weight: 500;
 }
 
-.btn-primary {
-  background: var(--primary);
+.btn-primary,
+.btn-orders,
+.btn-add-modal,
+.checkout-submit,
+.btn-primary-accent,
+.btnAdd,
+.btnShippingStatus,
+.modal button {
+  background: var(--accent);
   color: #fff;
   border: none;
-  padding: 14px 36px;
   border-radius: 8px;
-  font-weight: 300;
   cursor: pointer;
-  font-size: 15px;
   transition: all 0.3s;
+}
+
+.btn-primary:hover,
+.btn-orders:hover,
+.btn-add-modal:hover,
+.checkout-submit:hover,
+.btn-primary-accent:hover,
+.btnAdd:hover,
+.btnShippingStatus:hover,
+.modal button:hover {
+  background: #3d8976;
+}
+
+.btn-primary {
+  padding: 14px 36px;
+  font-size: 15px;
+  font-weight: 300;
   box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
 }
 
 .btn-primary:hover {
-  background: #3d8976;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
 }
 
 .btn-orders {
-  background: var(--primary);
-  color: #fff;
-  border: none;
   padding: 10px 24px;
-  border-radius: 8px;
-  font-weight: 300;
-  cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
+  font-weight: 300;
   min-width: 100px;
   height: 40px;
+  box-shadow: 0 4px 12px rgba(74, 155, 142, 0.3);
 }
 
 .btn-orders:hover {
-  background: #3d8976;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(74, 155, 142, 0.4);
 }
@@ -329,26 +321,19 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
-  border: 1px solid #ddd;
 }
 
 .btnView {
   background: #fff;
   color: #111;
+  border: 1px solid #ddd;
 }
 
 .btnView:hover {
   background: #f5f5f5;
 }
 
-.btnAdd {
-  background: var(--accent) !important;
-  color: #fff !important;
-  border: none !important;
-}
-
 .btnAdd:hover {
-  background: #3d8976 !important;
   transform: scale(1.05);
 }
 
@@ -430,23 +415,15 @@ body {
 }
 
 .modal button {
-  background: var(--primary);
-  color: #fff;
-  border: none;
   padding: 12px 24px;
-  border-radius: 8px;
-  cursor: pointer;
   margin-right: 10px;
   font-weight: 500;
-  transition: all 0.3s;
 }
 
 .modal button:hover {
-  background: #3d8976;
   transform: scale(1.02);
 }
 
-/* Forms */
 .form-row {
   display: flex;
   gap: 12px;
@@ -479,6 +456,193 @@ footer {
   color: #666;
   border-top: 1px solid #e5e5e5;
   font-size: 14px;
+}
+
+.product-error {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.flash-toast {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  z-index: 9999;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.card-actions {
+  margin-top: auto;
+}
+
+.cart-item-info {
+  flex: 1;
+}
+
+.cart-item-name {
+  font-weight: 600;
+}
+
+.cart-item-controls {
+  text-align: right;
+}
+
+.qty-row {
+  display: flex;
+  align-items: center;
+}
+
+.qty-btn {
+  padding: 4px 10px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.qty-value {
+  margin: 0 12px;
+  font-weight: 600;
+}
+
+.cart-item-total {
+  margin-top: 8px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.product-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.product-modal-img img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.product-modal-category {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.product-modal-price {
+  margin: 16px 0;
+  font-size: 28px;
+}
+
+.product-modal-desc {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.product-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.btn-add-modal {
+  flex: 1;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.modal .btn-close-modal {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #111;
+}
+
+.auth-input,
+.checkout-input {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.auth-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-secondary {
+  padding: 8px;
+  flex: 1;
+}
+
+.btn-primary-accent {
+  padding: 8px;
+  flex: 1;
+  border-radius: 6px;
+}
+
+.checkout-submit {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  font-weight: 600;
+}
+
+.orders-list {
+  max-height: 400px;
+  overflow: auto;
+  margin-top: 12px;
+}
+
+.orders-footer {
+  text-align: right;
+  margin-top: 12px;
+}
+
+.order-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.order-card-header {
+  font-weight: 600;
+}
+
+.order-card-meta {
+  margin: 4px 0;
+}
+
+.order-items {
+  margin-top: 6px;
+}
+
+.order-item {
+  font-size: 13px;
+}
+
+.btnShippingStatus {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.shipping-status-result {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #333;
 }
 
 @media (max-width: 700px) {

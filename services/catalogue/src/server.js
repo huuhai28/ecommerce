@@ -11,6 +11,10 @@ const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 const isDebug = LOG_LEVELS[LOG_LEVEL] >= LOG_LEVELS.debug;
 const SERVICE_NAME = 'catalogue';
 
+function makeRequestId() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 const log = (level, message, meta) => {
     if (LOG_LEVELS[level] > LOG_LEVELS[LOG_LEVEL]) {
         return;
@@ -33,7 +37,7 @@ const log = (level, message, meta) => {
 app.use(express.json());
 
 app.use((req, res, next) => {
-    req.requestId = req.headers['x-request-id'] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    req.requestId = req.headers['x-request-id'] || makeRequestId();
     const startedAt = Date.now();
     res.on('finish', () => {
         log('info', 'http', {
@@ -75,6 +79,22 @@ const waitForDB = async (maxRetries = 30, delayMs = 1000) => {
         }
     }
 };
+
+function formatProduct(p) {
+    return {
+        id: p.id,
+        sku: p.sku,
+        title: p.name,
+        price: parseFloat(p.price) || 0,
+        category: p.category || 'UNCATEGORIZED',
+        desc: p.description,
+        img: p.img,
+        active: p.active,
+        unitsInStock: p.units_in_stock,
+        dateCreated: p.date_created,
+        categoryId: p.category_id,
+    };
+}
 
 const dbQuery = async (text, params) => {
     const startedAt = Date.now();
@@ -129,19 +149,7 @@ app.get("/api/products", async (req, res) => {
             ORDER BY p.id DESC
         `);
         
-        const products = result.rows.map(p => ({
-            id: p.id,
-            sku: p.sku,
-            title: p.name,
-            price: parseFloat(p.price),
-            category: p.category || 'UNCATEGORIZED',
-            desc: p.description,
-            img: p.img,
-            active: p.active,
-            unitsInStock: p.units_in_stock,
-            dateCreated: p.date_created,
-            categoryId: p.category_id
-        }));
+        const products = result.rows.map(formatProduct);
 
         log('info', `products_listed count=${products.length}`, { requestId: req.requestId, status: 200, latencyMs: Date.now() - startReq });
         res.json(products);
@@ -180,19 +188,7 @@ app.get("/api/products/:id", async (req, res) => {
 
         const p = result.rows[0];
         log('info', 'product_found', { requestId: req.requestId, productId: id, status: 200, latencyMs: Date.now() - startReq });
-        res.json({
-            id: p.id,
-            sku: p.sku,
-            title: p.name,
-            price: parseFloat(p.price),
-            category: p.category || 'UNCATEGORIZED',
-            desc: p.description,
-            img: p.img,
-            active: p.active,
-            unitsInStock: p.units_in_stock,
-            dateCreated: p.date_created,
-            categoryId: p.category_id
-        });
+        res.json(formatProduct(p));
     } catch (err) {
         log('error', 'product_fetch_error', { requestId: req.requestId, productId: req.params.id, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server." });

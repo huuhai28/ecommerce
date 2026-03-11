@@ -21,53 +21,64 @@ if (useGateway) {
     const gatewayBase = buildBase(resolvedGatewayHost, gatewayPort);
     API_ENDPOINTS = {
         AUTH: {
-            LOGIN: `${gatewayBase}/users/login`,
-            REGISTER: `${gatewayBase}/users/register`
+            LOGIN:    `${gatewayBase}/users/login`,
+            REGISTER: `${gatewayBase}/users/register`,
         },
         PRODUCTS: {
-            LIST: `${gatewayBase}/products`,
-            DETAIL: (id) => `${gatewayBase}/products/${id}`
+            LIST:   `${gatewayBase}/products`,
+            DETAIL: (id) => `${gatewayBase}/products/${id}`,
+        },
+        CART: {
+            GET:   (userId) => `${gatewayBase}/cart/${userId}`,
+            SAVE:  (userId) => `${gatewayBase}/cart/${userId}`,
+            CLEAR: (userId) => `${gatewayBase}/cart/${userId}`,
         },
         ORDERS: {
-            CREATE: `${gatewayBase}/orders`,
-            MY_ORDERS: `${gatewayBase}/orders/me`
+            CREATE:    `${gatewayBase}/orders`,
+            MY_ORDERS: `${gatewayBase}/orders/me`,
         },
         SHIPPING: {
             CALCULATE: `${gatewayBase}/shipping/calculate`,
-            CREATE: `${gatewayBase}/shipping`,
-            TRACK: (orderId) => `${gatewayBase}/shipping/${orderId}`
+            CREATE:    `${gatewayBase}/shipping`,
+            TRACK:     (orderId) => `${gatewayBase}/shipping/${orderId}`,
         },
         PAYMENT: {
-            PROCESS: `${gatewayBase}/payments`
-        }
+            PROCESS: `${gatewayBase}/payments`,
+        },
     };
     activeMode = `gateway -> ${gatewayBase}`;
 } else {
-    const usersBase = buildBase(API_CONFIG.userHost, API_CONFIG.userPort || 3004);
-    const catalogueBase = buildBase(API_CONFIG.catalogueHost, API_CONFIG.cataloguePort || 3002);
-    const ordersBase = buildBase(API_CONFIG.orderHost, API_CONFIG.orderPort || 3003);
-    const shippingBase = buildBase(API_CONFIG.shippingHost, API_CONFIG.shippingPort || 3005);
-    const paymentBase = buildBase(API_CONFIG.paymentHost, API_CONFIG.paymentPort || 3006);
+const usersBase = buildBase(API_CONFIG.userHost, API_CONFIG.userPort || 3001);
+const catalogueBase = buildBase(API_CONFIG.catalogueHost, API_CONFIG.cataloguePort || 3002);
+const ordersBase = buildBase(API_CONFIG.orderHost, API_CONFIG.orderPort || 3003);
+const paymentBase = buildBase(API_CONFIG.paymentHost, API_CONFIG.paymentPort || 3005);
+const shippingBase = buildBase(API_CONFIG.shippingHost, API_CONFIG.shippingPort || 3005);
+const cartBase = buildBase(API_CONFIG.cartHost, API_CONFIG.cartPort || 3006);
     API_ENDPOINTS = {
         AUTH: {
-            LOGIN: `${usersBase}/login`,
-            REGISTER: `${usersBase}/register`
+            LOGIN:    `${usersBase}/login`,
+            REGISTER: `${usersBase}/register`,
         },
         PRODUCTS: {
-            LIST: `${catalogueBase}/products`,
-            DETAIL: (id) => `${catalogueBase}/products/${id}`
+            LIST:   `${catalogueBase}/products`,
+            DETAIL: (id) => `${catalogueBase}/products/${id}`,
+        },
+        CART: {
+            GET:   (userId) => `${cartBase}/cart/${userId}`,
+            SAVE:  (userId) => `${cartBase}/cart/${userId}`,
+            CLEAR: (userId) => `${cartBase}/cart/${userId}`,
         },
         ORDERS: {
-            CREATE: `${ordersBase}/orders`,
-            MY_ORDERS: `${ordersBase}/orders/me`
+            CREATE:    `${ordersBase}/orders`,
+            MY_ORDERS: `${ordersBase}/orders/me`,
         },
         SHIPPING: {
             CALCULATE: `${shippingBase}/shipping/calculate`,
-            CREATE: `${shippingBase}/shipping`
+            CREATE:    `${shippingBase}/shipping`,
         },
         PAYMENT: {
-            PROCESS: `${paymentBase}/payments`
-        }
+            PROCESS: `${paymentBase}/payments`,
+        },
     };
     activeMode = `direct services -> users:${usersBase}, catalogue:${catalogueBase}, orders:${ordersBase}`;
 }

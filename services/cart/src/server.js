@@ -89,26 +89,26 @@ app.get('/health', async (_req, res) => {
 });
 
 app.get('/api/cart/:user', async (req, res) => {
-  const u = req.params.user;
+  const userId = req.params.user;
   try {
     const startDb = Date.now();
-    const result = await pool.query('SELECT payload FROM carts WHERE user_id=$1', [u]);
+    const result = await pool.query('SELECT payload FROM carts WHERE user_id=$1', [userId]);
     const dbTime = Date.now() - startDb;
     if (result.rows.length === 0) {
-      log('INFO', 'cart_empty', { requestId: req.requestId, userId: u, status: 200, latencyMs: dbTime });
+      log('INFO', 'cart_empty', { requestId: req.requestId, userId, status: 200, latencyMs: dbTime });
       return res.json({});
     }
     const itemCount = result.rows[0].payload ? Object.keys(result.rows[0].payload).length : 0;
-    log('INFO', `cart_loaded items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: dbTime });
+    log('INFO', `cart_loaded items=${itemCount}`, { requestId: req.requestId, userId, status: 200, latencyMs: dbTime });
     res.json(result.rows[0].payload || {});
   } catch (err) {
-    log('ERROR', 'cart_load_error', { requestId: req.requestId, userId: u, status: 500 });
+    log('ERROR', 'cart_load_error', { requestId: req.requestId, userId, status: 500 });
     res.status(500).json({ message: 'Failed to load cart', error: err.message });
   }
 });
 
 app.post('/api/cart/:user', async (req, res) => {
-  const u = req.params.user;
+  const userId = req.params.user;
   const payload = req.body || {};
   const itemCount = Object.keys(payload).length;
   
@@ -117,28 +117,25 @@ app.post('/api/cart/:user', async (req, res) => {
     await pool.query(
       `INSERT INTO carts(user_id, payload, updated_at) VALUES($1,$2,NOW())
        ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()` ,
-      [u, payload]
+      [userId, payload]
     );
-    log('INFO', `cart_saved items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: Date.now() - startDb });
+    log('INFO', `cart_saved items=${itemCount}`, { requestId: req.requestId, userId, status: 200, latencyMs: Date.now() - startDb });
     res.json({ ok: true });
   } catch (err) {
-    log('ERROR', 'cart_save_error', { requestId: req.requestId, userId: u, status: 500 });
+    log('ERROR', 'cart_save_error', { requestId: req.requestId, userId, status: 500 });
     res.status(500).json({ message: 'Failed to save cart', error: err.message });
   }
 });
 
 app.delete('/api/cart/:user', async (req, res) => {
-  const u = req.params.user;
+  const userId = req.params.user;
   try {
     const startDb = Date.now();
-    const checkResult = await pool.query('SELECT payload FROM carts WHERE user_id=$1', [u]);
-    const itemCount = checkResult.rows.length > 0 ? Object.keys(checkResult.rows[0].payload || {}).length : 0;
-    
-    await pool.query('DELETE FROM carts WHERE user_id=$1', [u]);
-    log('INFO', `cart_deleted items=${itemCount}`, { requestId: req.requestId, userId: u, status: 200, latencyMs: Date.now() - startDb });
+    await pool.query('DELETE FROM carts WHERE user_id=$1', [userId]);
+    log('INFO', 'cart_deleted', { requestId: req.requestId, userId, status: 200, latencyMs: Date.now() - startDb });
     res.json({ ok: true });
   } catch (err) {
-    log('ERROR', 'cart_delete_error', { requestId: req.requestId, userId: u, status: 500 });
+    log('ERROR', 'cart_delete_error', { requestId: req.requestId, userId, status: 500 });
     res.status(500).json({ message: 'Failed to delete cart', error: err.message });
   }
 });

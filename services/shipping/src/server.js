@@ -51,7 +51,6 @@ const pool = new Pool({
 
 log('INFO', 'startup', { status: 'init' });
 log('INFO', `config port=${PORT}`);
-log('INFO', `config rabbitmq=${RABBITMQ_URL}`);
 log('INFO', `config queue=${QUEUE}`);
 log('INFO', `config db_host=${process.env.DB_HOST}`);
 log('INFO', `config db_name=${process.env.DB_DATABASE}`);
@@ -130,8 +129,7 @@ async function start(){
       ch.ack(msg);
       log('INFO', 'shipping_request_processed', { orderId: payload.orderId, status: payload.status || 'pending' });
     } catch (err) {
-      log('ERROR', 'shipping_message_error', { status: 'failed' });
-      console.error(err);
+      log('ERROR', 'shipping_message_error', { orderId: payload?.orderId || 'unknown', error: err.message });
     }
   }, { noAck: false });
   
@@ -160,8 +158,7 @@ app.get('/api/shipping/:orderId', async (req, res) => {
     log('INFO', 'shipping_found', { requestId: req.requestId, orderId, status: result.rows[0].status, latencyMs: dbTime });
     res.json(result.rows[0]);
   } catch (err) {
-    log('ERROR', 'shipping_get_error', { requestId: req.requestId, orderId, status: 500 });
-    console.error(err);
+    log('ERROR', 'shipping_get_error', { requestId: req.requestId, orderId, status: 500, error: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -178,14 +175,12 @@ if (process.env.NODE_ENV !== 'test') {
         log('INFO', 'server_ready');
       });
       start().catch(err => { 
-        log('ERROR', 'startup_failed', { status: 'failed' });
-        console.error(err);
+        log('ERROR', 'startup_failed', { error: err.message });
         process.exit(1);
       });
       module.exports = { start, server };
     } catch (err) {
-      log('ERROR', 'startup_failed', { status: 'failed' });
-      console.error(err);
+      log('ERROR', 'startup_failed', { error: err.message });
       process.exit(1);
     }
   })();

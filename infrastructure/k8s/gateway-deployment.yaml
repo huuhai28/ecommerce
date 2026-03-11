@@ -14,7 +14,7 @@ spec:
         app: api-gateway
     spec:
       nodeSelector:
-        kubernetes.io/hostname: master-node
+        kubernetes.io/hostname: worker-node
       containers:
       - name: api-gateway
         image: huuhai123/ecommerce-gateway:latest

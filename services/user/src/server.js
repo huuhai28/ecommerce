@@ -147,8 +147,7 @@ app.post("/api/register", async (req, res) => {
             log('WARN', 'register_conflict', { requestId: req.requestId, status: 409 });
             return res.status(409).json({ message: "Email đã tồn tại trong hệ thống." });
         }
-        log('ERROR', 'register_error', { requestId: req.requestId, status: 500 });
-        console.error(err);
+        log('ERROR', 'register_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server trong quá trình đăng ký." });
     }
 });
@@ -201,8 +200,7 @@ app.post("/api/login", async (req, res) => {
         });
 
     } catch (err) {
-        log('ERROR', 'login_error', { requestId: req.requestId, status: 500 });
-        console.error(err);
+        log('ERROR', 'login_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server trong quá trình đăng nhập." });
     }
 });
@@ -231,36 +229,17 @@ app.get("/api/customers/:id", protect, async (req, res) => {
             dateCreated: customer.date_created
         });
     } catch (err) {
-        log('ERROR', 'customer_fetch_error', { requestId: req.requestId, status: 500 });
-        console.error(err);
+        log('ERROR', 'customer_fetch_error', { requestId: req.requestId, status: 500, error: err.message });
         res.status(500).json({ message: "Lỗi server." });
     }
 });
 
 
 
-const waitForDBUser = async (maxRetries = 30, delayMs = 1000) => {
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            await pool.query('SELECT 1');
-            log('INFO', 'db_connected', {});
-            return true;
-        } catch (err) {
-            if (i < maxRetries - 1) {
-                log('WARN', 'db_connection_retry', { attempt: i + 1, maxRetries, nextRetryMs: delayMs });
-                await new Promise(resolve => setTimeout(resolve, delayMs));
-            } else {
-                log('ERROR', 'db_connection_failed', { error: err.message });
-                throw err;
-            }
-        }
-    }
-};
-
 if (process.env.NODE_ENV !== 'test') {
     (async () => {
       try {
-        await waitForDBUser();
+        await waitForDB();
         app.listen(PORT, () =>
             log('INFO', `server_listening port=${PORT}`)
         );

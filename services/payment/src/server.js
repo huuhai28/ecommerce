@@ -156,8 +156,6 @@ async function startRabbitMQ() {
           error: err.message,
           latencyMs: errorLatency
         });
-        console.error('Payment processing error:', err);
-        // Nack message to retry
         ch.nack(msg, false, true);
       }
     }, { noAck: false });
@@ -166,7 +164,6 @@ async function startRabbitMQ() {
       status: 'failed',
       error: err.message
     });
-    console.error('RabbitMQ connection error:', err);
     setTimeout(startRabbitMQ, 5000);
   }
 }
@@ -258,7 +255,6 @@ app.post('/api/payments', async (req, res) => {
       latencyMs: totalLatency,
       status: 500 
     });
-    console.error('Payment creation error:', err);
     res.status(500).json({ message: 'Payment error', error: err.message });
   }
 });
