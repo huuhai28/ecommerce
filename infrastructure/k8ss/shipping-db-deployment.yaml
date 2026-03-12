@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shipping
+  template:
+    metadata:
+      labels:
+        app: shipping
+    spec:
+      containers:
+        - name: shipping
+          imagePullPolicy: IfNotPresent
+          image: postgres:14
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              value: "shipping-db"
+          volumeMounts:
+            - name: shipping-data
+              mountPath: /var/lib/postgres/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: shipping-data
+          persistentVolumeClaim:
+            claimName: shipping-pvc
+        - name: init-script
+          configMap:
+            name: shipping-init
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipping-init
+  namespace: ecommerce
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS customer (
+      id SERIAL PRIMARY KEY,
+      first_name VARCHAR(255) NOT NULL,
+      last_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT,
+      date_created TIMESTAMP DEFAULT NOW()
+    );
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  namespace: ecommerce
+spec:
+  selector:
+    app: shipping
+  ports:
+    - port: 5432
+      targetPort: 5432
+

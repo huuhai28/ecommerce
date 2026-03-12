@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-db
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-db
+  template:
+    metadata:
+      labels:
+        app: payment-db
+    spec:
+      containers:
+        - name: payment-db
+          imagePullPolicy: IfNotPresent
+          image: postgres:14
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              value: "payment_db"
+          volumeMounts:
+            - name: payment-db-data
+              mountPath: /var/lib/postgres/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: payment-db-data
+          persistentVolumeClaim:
+            claimName: payment-db-pvc
+        - name: init-script
+          configMap:
+            name: payment-db-init
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-db-init
+  namespace: ecommerce
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS payment (
+    id SERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    amount DECIMAL(13,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    date_created TIMESTAMP DEFAULT NOW()
+    );
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+  namespace: ecommerce
+spec:
+  selector:
+    app: payment-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+

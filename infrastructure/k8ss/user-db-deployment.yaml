@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-db
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-db
+  template:
+    metadata:
+      labels:
+        app: user-db
+    spec:
+      containers:
+        - name: user-db
+          imagePullPolicy: IfNotPresent
+          image: postgres:14
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              value: "user_db"
+          volumeMounts:
+            - name: user-db-data
+              mountPath: /var/lib/postgres/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: user-db-data
+          persistentVolumeClaim:
+            claimName: user-db-pvc
+        - name: init-script
+          configMap:
+            name: user-db-init
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-db-init
+  namespace: ecommerce
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS customer (
+      id SERIAL PRIMARY KEY,
+      first_name VARCHAR(255) NOT NULL,
+      last_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT,
+      date_created TIMESTAMP DEFAULT NOW()
+    );
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-db
+  namespace: ecommerce
+spec:
+  selector:
+    app: user-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+
