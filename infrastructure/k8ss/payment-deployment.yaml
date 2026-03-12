@@ -21,12 +21,20 @@ spec:
         - name: payment-service
           image: huuhai123/payment-service:latest
           env:
-            - name: POSTGRES_USER
+            - name: PORT
+              value: "3003"
+            - name: DB_HOST
+              value: "payment-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "payment_db"
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets
                   key: DB_USER
-            - name: POSTGRES_PASSWORD
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets

@@ -21,6 +21,14 @@ spec:
         - name: frontend-service
           image: huuhai123/frontend-service:latest
           env:
+            - name: PORT
+              value: "3003"
+            - name: DB_HOST
+              value: "frontend"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "frontend"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -39,7 +47,7 @@ spec:
               cpu: "500m"
               memory: "512Mi"
           ports: 
-            - containerPort: 3000
+            - containerPort: 3003
 ---
 apiVersion: v1
 kind: Service
@@ -51,6 +59,6 @@ spec:
   selector:
     app: frontend-service
   ports:
-    - port: 3000
-      targetPort: 3000
+    - port: 3003
+      targetPort: 3003
       nodePort: 30009

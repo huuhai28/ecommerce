@@ -21,12 +21,20 @@ spec:
         - name: shipping-service
           image: huuhai123/shipping-service:latest
           env:
-            - name: POSTGRES_shipping
+            - name: PORT
+              value: "3004"
+            - name: DB_HOST
+              value: "shipping-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "shipping_db"
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets
-                  key: DB_shipping
-            - name: POSTGRES_PASSWORD
+                  key: DB_USER
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets

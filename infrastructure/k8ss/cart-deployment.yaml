@@ -21,6 +21,14 @@ spec:
         - name: cart-service
           image: huuhai123/cart-service:latest
           env:
+            - name: PORT
+              value: "3000"
+            - name: DB_HOST
+              value: "cart-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "cart_db"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

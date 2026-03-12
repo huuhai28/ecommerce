@@ -21,12 +21,20 @@ spec:
         - name: order-service
           image: huuhai123/order-service:latest
           env:
-            - name: POSTGRES_USER
+            - name: PORT
+              value: "3002"
+            - name: DB_HOST
+              value: "order-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "order_db"
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets
                   key: DB_USER
-            - name: POSTGRES_PASSWORD
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets

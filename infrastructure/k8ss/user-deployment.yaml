@@ -21,12 +21,20 @@ spec:
         - name: user-service
           image: huuhai123/user-service:latest
           env:
-            - name: POSTGRES_USER
+            - name: PORT
+              value: "3005"
+            - name: DB_HOST
+              value: "user-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: "user_db"
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets
                   key: DB_USER
-            - name: POSTGRES_PASSWORD
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: ecommerce-secrets
