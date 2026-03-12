@@ -1,4 +1,4 @@
 apiVersion: v1
-kind: Configmap
+kind: Namespace
 metadata:
   name: ecommerce
