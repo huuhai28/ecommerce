@@ -23,22 +23,6 @@ spec:
           env:
             - name: PORT
               value: "3003"
-            - name: DB_HOST
-              value: "frontend"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_DATABASE
-              value: "frontend"
-            - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: ecommerce-secrets
-                  key: DB_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: ecommerce-secrets
-                  key: DB_PASSWORD
           resources:
             requests:
               cpu: "100m"

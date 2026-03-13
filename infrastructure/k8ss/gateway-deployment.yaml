@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: gateway-service
-          image: huuhai123/gateway-service:latest
+          image: huuhai123/ecommerce-gateway:latest
           resources:
             requests:
               cpu: "100m"
