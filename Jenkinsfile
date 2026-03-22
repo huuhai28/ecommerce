@@ -7,7 +7,7 @@ pipeline {
     environment {
         DOCKER_HUB_USER = 'huuhai123'
         LIST_SERVICES = 'frontend gateway cart catalogue order payment shipping user'
-        GATEWAY_HOST = '100.104.151.90'
+        GATEWAY_HOST = '100.87.179.112'
         GATEWAY_PORT = '30004'
     }
     stages {
@@ -20,6 +20,12 @@ pipeline {
             }
         }
         stage('Apply Infrastructure') {
+            when {
+                anyOf {
+                    changeset "infrastructure/k8s/**"
+                    expression { params.SERVICE == 'all' && currentBuild.number == 1 }
+                }
+            }
             steps {
                 script {
                     sh 'kubectl apply -f infrastructure/k8s/namespace.yaml --validate=false'
@@ -96,7 +102,6 @@ pipeline {
                         def deploymentName = (svc == 'gateway') ? 'api-gateway' : "${svc}-service"
                         sh "kubectl rollout status deployment/${deploymentName} -n ecommerce --timeout=5m || true"
                     }
-                    sleep 30
                 }
                 sh 'chmod +x tests/e2e-smoke.sh'
                 sh '''
