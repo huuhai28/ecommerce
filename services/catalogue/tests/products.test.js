@@ -50,7 +50,7 @@ describe('GET /api/products', () => {
     const product = res.body[0];
     expect(product).toHaveProperty('id');
     expect(product).toHaveProperty('sku');
-    expect(product).toHaveProperty('name');
+    expect(product).toHaveProperty('title');
     expect(product).toHaveProperty('price');
   });
 
