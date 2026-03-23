@@ -184,7 +184,7 @@ function attachProductHandlers() {
 function renderCart() {
     cartItemsWrap.innerHTML = '';
     const cartItems = Object.entries(cart)
-        .map(([id, qty]) => ({ product: products.find(p => p.id === id), qty }))
+        .map(([id, qty]) => ({ product: products.find(p => String(p.id) === String(id)), qty }))
         .filter(item => item.product);
 
     let subtotal = 0;
