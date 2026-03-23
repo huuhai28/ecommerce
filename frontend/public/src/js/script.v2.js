@@ -118,6 +118,7 @@ async function fetchProducts() {
             products = await response.json();
             renderCategories();
             renderProducts();
+            renderCart();
         } else {
             showProductError('Không thể tải sản phẩm (lỗi server).');
         }
