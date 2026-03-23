@@ -375,6 +375,10 @@ if (checkoutBtn) {
 function buildOrderPayload(currentCart, productList, form) {
     const items = Object.entries(currentCart).map(([id, qty]) => {
         const product = productList.find(x => String(x.id) === String(id));
+        if (!product) {
+            console.error('Product not found for id:', id, 'Available products:', productList.map(p => p.id));
+            throw new Error(`Product ${id} not found`);
+        }
         return {
             productId: parseInt(id, 10),
             quantity:  qty,
