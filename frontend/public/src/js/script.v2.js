@@ -374,7 +374,7 @@ if (checkoutBtn) {
 
 function buildOrderPayload(currentCart, productList, form) {
     const items = Object.entries(currentCart).map(([id, qty]) => {
-        const product = productList.find(x => x.id === id);
+        const product = productList.find(x => String(x.id) === String(id));
         return {
             productId: parseInt(id, 10),
             quantity:  qty,
