@@ -84,7 +84,7 @@ async function saveCart() {
     try {
         const cartData = {};
         Object.entries(cart).forEach(([productId, quantity]) => {
-            const product = products.find(p => p.id === productId);
+            const product = products.find(p => String(p.id) === String(productId));
             if (product) {
                 cartData[productId] = { quantity, product };
             }
